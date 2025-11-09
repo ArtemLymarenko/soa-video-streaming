@@ -44,12 +44,9 @@ func NewHTTPServer(o ServerOptions) *http.Server {
 
 func Module() fx.Option {
 	return fx.Provide(
-		func(o ServerOptions) *http.Server {
-			return NewHTTPServer(o)
-		},
+		NewHTTPServer,
 	)
 }
 
-func Invoke() {
-
+func Invoke(s *http.Server) {
 }
