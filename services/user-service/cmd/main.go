@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	httpsrv "soa-video-streaming/services/user-service/internal/app/http"
+	"soa-video-streaming/pkg/httpsrv"
 	"soa-video-streaming/services/user-service/internal/config"
 	ctrlV1 "soa-video-streaming/services/user-service/internal/controller/v1"
 
