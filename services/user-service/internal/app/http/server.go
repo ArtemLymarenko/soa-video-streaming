@@ -50,6 +50,4 @@ func Module() fx.Option {
 	)
 }
 
-func Invoke() {
-
-}
+func Invoke(*http.Server) {}
