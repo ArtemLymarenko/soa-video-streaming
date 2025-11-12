@@ -1,4 +1,4 @@
-package v1
+package rest
 
 import (
 	"net/http"
@@ -6,6 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 )
+
+func Module() fx.Option {
+	return fx.Options(
+		fx.Provide(
+			NewGinEngine,
+		),
+	)
+}
 
 const (
 	HealthRoute = "/health"
@@ -21,12 +29,4 @@ func NewGinEngine() *gin.Engine {
 	})
 
 	return r
-}
-
-func Module() fx.Option {
-	return fx.Options(
-		fx.Provide(
-			NewGinEngine,
-		),
-	)
 }

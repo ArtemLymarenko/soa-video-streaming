@@ -9,6 +9,7 @@ import (
 
 type AppConfig struct {
 	config.BaseHTTPServerConfig `mapstructure:",squash"`
+	config.BaseGRPCServerConfig `mapstructure:",squash"`
 }
 
 func NewAppConfig() (*AppConfig, error) {
@@ -19,13 +20,19 @@ func ProvideHTTPConfig(ac *AppConfig) *config.BaseHTTPServerConfig {
 	return &ac.BaseHTTPServerConfig
 }
 
-func Module() fx.Option {
-	return fx.Provide(
-		NewAppConfig,
-		ProvideHTTPConfig,
-	)
+func ProvideGRPCConfig(ac *AppConfig) *config.BaseGRPCServerConfig {
+	return &ac.BaseGRPCServerConfig
 }
 
-func Invoke(cfg *AppConfig) {
-	logrus.WithField("config", cfg).Info("Config loaded")
+func Module() fx.Option {
+	return fx.Options(
+		fx.Provide(
+			NewAppConfig,
+			ProvideHTTPConfig,
+			ProvideGRPCConfig,
+		),
+		fx.Invoke(func(cfg *AppConfig) {
+			logrus.WithField("config", cfg).Info("Config loaded")
+		}),
+	)
 }

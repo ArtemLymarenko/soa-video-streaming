@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "soa-video-streaming/pkg/pb/user/v1;userv1";
+
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  int64 created_at = 4;
+}
+
+message GetUserInfoByIDRequest {
+  string id = 1;
+}
+
+message GetUserInfoByIDResponse {
+  User user = 1;
+}
+
+service UserService {
+  rpc GetUserInfoByID(GetUserInfoByIDRequest)
+      returns (GetUserInfoByIDResponse);
+}

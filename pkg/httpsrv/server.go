@@ -10,20 +10,24 @@ import (
 	"go.uber.org/fx"
 )
 
-type ServerOptions struct {
-	fx.In
-	Lc  fx.Lifecycle
-	Cfg *config.BaseHTTPServerConfig
-	Eng *gin.Engine
+func Module() fx.Option {
+	return fx.Options(
+		fx.Provide(
+			NewHTTPServer,
+		),
+		fx.Invoke(runServer),
+	)
 }
 
-func NewHTTPServer(o ServerOptions) *http.Server {
-	srv := &http.Server{
-		Addr:    o.Cfg.HTTP.Addr,
-		Handler: o.Eng,
+func NewHTTPServer(cfg *config.BaseHTTPServerConfig, eng *gin.Engine) *http.Server {
+	return &http.Server{
+		Addr:    cfg.HTTP.Addr,
+		Handler: eng,
 	}
+}
 
-	o.Lc.Append(fx.Hook{
+func runServer(lc fx.Lifecycle, srv *http.Server) {
+	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
 				logrus.Infof("Starting HTTP server on %s", srv.Addr)
@@ -38,14 +42,4 @@ func NewHTTPServer(o ServerOptions) *http.Server {
 			return srv.Shutdown(ctx)
 		},
 	})
-
-	return srv
 }
-
-func Module() fx.Option {
-	return fx.Provide(
-		NewHTTPServer,
-	)
-}
-
-func Invoke(s *http.Server) {}
