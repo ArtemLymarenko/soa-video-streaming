@@ -1,9 +1,9 @@
-package http
+package httpsrv
 
 import (
 	"context"
 	"net/http"
-	"soa-video-streaming/services/user-service/internal/config"
+	"soa-video-streaming/pkg/config"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -13,7 +13,7 @@ import (
 type ServerOptions struct {
 	fx.In
 	Lc  fx.Lifecycle
-	Cfg *config.AppConfig
+	Cfg *config.BaseHTTPServerConfig
 	Eng *gin.Engine
 }
 
@@ -44,10 +44,8 @@ func NewHTTPServer(o ServerOptions) *http.Server {
 
 func Module() fx.Option {
 	return fx.Provide(
-		func(o ServerOptions) *http.Server {
-			return NewHTTPServer(o)
-		},
+		NewHTTPServer,
 	)
 }
 
-func Invoke(*http.Server) {}
+func Invoke(s *http.Server) {}

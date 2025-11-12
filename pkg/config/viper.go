@@ -29,3 +29,9 @@ func NewViper[T any]() (*T, error) {
 
 	return &cfg, nil
 }
+
+type BaseHTTPServerConfig struct {
+	HTTP struct {
+		Addr string `mapstructure:"addr"`
+	} `mapstructure:"http"`
+}
