@@ -19,7 +19,7 @@ func NewUserInfoRepository(db *pgxpool.Pool) *UserInfoRepository {
 	}
 }
 
-const saveQuery = `INSERT INTO user_info(user_id, first_name, last_name)	VALUES ($1, $2, $3)`
+const saveQuery = `INSERT INTO user_info(user_id, first_name, last_name) VALUES ($1, $2, $3)`
 
 func (r *UserInfoRepository) Save(ctx context.Context, userId string, userInfo entity.UserInfo) error {
 	_, err := r.db.Exec(ctx, saveQuery, userId, userInfo.FirstName, userInfo.LastName)

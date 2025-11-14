@@ -17,19 +17,15 @@ func Module() fx.Option {
 }
 
 const (
-	GetUserByID = "/users/:userID"
+	SignInEndpoint = "/signin"
+	SignUpEndpoint = "/signup"
 )
 
-type EngineController struct {
-	fx.In
-
-	Users *rest.UsersController
-}
-
-func NewGinEngine(e EngineController) *gin.Engine {
+func NewGinEngine(users *rest.UsersController) *gin.Engine {
 	r := gin.Default()
 
-	r.GET(GetUserByID, e.Users.GetUserByID)
+	r.POST(SignInEndpoint, users.SignIn)
+	r.POST(SignUpEndpoint, users.SignUp)
 
 	return r
 }
