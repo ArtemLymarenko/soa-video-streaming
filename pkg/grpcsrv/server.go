@@ -3,12 +3,15 @@ package grpcsrv
 import (
 	"context"
 	"net"
-	"soa-video-streaming/pkg/config"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 )
+
+type Config struct {
+	Addr string `mapstructure:"addr"`
+}
 
 type Registrar interface {
 	Register(s *grpc.Server)
@@ -38,12 +41,12 @@ func NewGRPCServer(p Params) *grpc.Server {
 
 func StartServer(
 	lc fx.Lifecycle,
-	cfg *config.BaseGRPCServerConfig,
+	cfg *Config,
 	srv *grpc.Server,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			addr := cfg.GRPC.Addr
+			addr := cfg.Addr
 			lis, err := net.Listen("tcp", addr)
 			if err != nil {
 				return err

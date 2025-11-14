@@ -4,6 +4,7 @@ import (
 	"flag"
 	"soa-video-streaming/pkg/grpcsrv"
 	"soa-video-streaming/pkg/httpsrv"
+	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/user-service/internal/config"
 	ctrlV1 "soa-video-streaming/services/user-service/internal/controller/rest"
 	grpcRegistrator "soa-video-streaming/services/user-service/internal/transport/grpc"
@@ -20,5 +21,6 @@ func main() {
 		ctrlV1.Module(),
 		grpcsrv.Module(),
 		grpcRegistrator.Module(),
+		rabbitmq.Module(),
 	).Run()
 }

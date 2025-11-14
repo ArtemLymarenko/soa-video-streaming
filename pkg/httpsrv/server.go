@@ -3,7 +3,6 @@ package httpsrv
 import (
 	"context"
 	"net/http"
-	"soa-video-streaming/pkg/config"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -19,9 +18,13 @@ func Module() fx.Option {
 	)
 }
 
-func NewHTTPServer(cfg *config.BaseHTTPServerConfig, eng *gin.Engine) *http.Server {
+type Config struct {
+	Addr string `mapstructure:"addr"`
+}
+
+func NewHTTPServer(cfg *Config, eng *gin.Engine) *http.Server {
 	return &http.Server{
-		Addr:    cfg.HTTP.Addr,
+		Addr:    cfg.Addr,
 		Handler: eng,
 	}
 }

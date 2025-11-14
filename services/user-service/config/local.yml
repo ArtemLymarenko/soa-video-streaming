@@ -2,3 +2,8 @@ http:
   addr: localhost:8080
 grpc:
   addr: localhost:8081
+rabbitmq:
+  url: ""
+  reconnect_attempts: 2
+  reconnect_delay: 30s
+  prefetch_count: 0
