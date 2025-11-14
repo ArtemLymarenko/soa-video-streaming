@@ -1,6 +1,8 @@
 package grpctransport
 
 import (
+	"soa-video-streaming/pkg/grpcsrv"
+
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 
@@ -14,6 +16,7 @@ func Module() fx.Option {
 		fx.Provide(
 			fx.Annotate(
 				newRegistrar,
+				fx.As(new(grpcsrv.Registrar)),
 				fx.ResultTags(`group:"grpc-registrars"`),
 			),
 		),
