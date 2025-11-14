@@ -8,12 +8,12 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(NewClient),
+		fx.Invoke(Run),
 	)
 }
 
@@ -29,11 +29,13 @@ type Client struct {
 	cfg  *Config
 }
 
-func NewClient(lc fx.Lifecycle, cfg *Config) (*Client, error) {
-	c := &Client{
+func NewClient(cfg *Config) (*Client, error) {
+	return &Client{
 		cfg: cfg,
-	}
+	}, nil
+}
 
+func Run(lc fx.Lifecycle, c *Client) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			return c.connectWithRetry(ctx)
@@ -46,8 +48,6 @@ func NewClient(lc fx.Lifecycle, cfg *Config) (*Client, error) {
 			return nil
 		},
 	})
-
-	return c, nil
 }
 
 func (c *Client) connectWithRetry(ctx context.Context) error {
@@ -56,7 +56,7 @@ func (c *Client) connectWithRetry(ctx context.Context) error {
 		conn, err := amqp.Dial(c.cfg.URL)
 		if err == nil {
 			c.conn = conn
-			logrus.Info("Connected to RabbitMQ", zap.String("url", c.cfg.URL))
+			logrus.Infof("Connected to RabbitMQ: %v", c.cfg.URL)
 			return nil
 		}
 

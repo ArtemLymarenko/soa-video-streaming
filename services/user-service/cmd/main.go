@@ -4,7 +4,10 @@ import (
 	"flag"
 	"soa-video-streaming/pkg/grpcsrv"
 	"soa-video-streaming/pkg/httpsrv"
+	"soa-video-streaming/pkg/postgres"
+	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/user-service/internal/config"
+	postgresRepos "soa-video-streaming/services/user-service/internal/repository/postgres"
 	grpcTransport "soa-video-streaming/services/user-service/internal/transport/grpc"
 	restTransport "soa-video-streaming/services/user-service/internal/transport/rest"
 
@@ -18,9 +21,12 @@ func main() {
 		config.Module(),
 		grpcsrv.Module(),
 		httpsrv.Module(),
+		rabbitmq.Module(),
+		postgres.Module(),
 
 		grpcTransport.Module(),
 		restTransport.Module(),
-		//rabbitmq.Module(),
+
+		postgresRepos.Module(),
 	).Run()
 }

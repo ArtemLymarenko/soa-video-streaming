@@ -6,3 +6,7 @@ protoc:
 	  --go_out=$(PB_OUT) --go_opt=paths=source_relative \
 	  --go-grpc_out=$(PB_OUT) --go-grpc_opt=paths=source_relative \
 	  $(shell find $(PROTO_DIR)/$(PROTO_SUBDIR) -name "*.proto")
+	  
+CREATE=migrate create -ext sql -dir $(path) -seq $(name)
+create-migration:
+	$(CREATE)

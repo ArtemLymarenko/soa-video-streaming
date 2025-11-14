@@ -3,7 +3,13 @@ http:
 grpc:
   addr: localhost:8081
 rabbitmq:
-  url: ""
+  url: "amqp://admin:admin@localhost:5672/"
   reconnect_attempts: 2
   reconnect_delay: 30s
   prefetch_count: 0
+postgres:
+  dsn: ""
+  min_conns: 0
+  max_conns: 5
+  conn_max_idle: 1m
+  health_check_int: 1m
