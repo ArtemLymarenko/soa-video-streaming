@@ -6,15 +6,15 @@ import (
 	"time"
 )
 
-type UserController struct {
+type UsersController struct {
 	pb.UnsafeUserServiceServer
 }
 
-func NewUserController() *UserController {
-	return &UserController{}
+func NewUserController() *UsersController {
+	return &UsersController{}
 }
 
-func (u *UserController) GetUserInfoByID(ctx context.Context, req *pb.GetUserInfoByIDRequest) (*pb.GetUserInfoByIDResponse, error) {
+func (u *UsersController) GetUserInfoByID(ctx context.Context, req *pb.GetUserInfoByIDRequest) (*pb.GetUserInfoByIDResponse, error) {
 	return &pb.GetUserInfoByIDResponse{
 		User: &pb.User{
 			Id:        req.GetId(),

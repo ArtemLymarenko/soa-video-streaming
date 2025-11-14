@@ -59,6 +59,7 @@ func (c *Client) connectWithRetry(ctx context.Context) error {
 			logrus.Info("Connected to RabbitMQ", zap.String("url", c.cfg.URL))
 			return nil
 		}
+
 		lastErr = err
 		logrus.WithFields(logrus.Fields{
 			"url":     c.cfg.URL,
@@ -71,6 +72,7 @@ func (c *Client) connectWithRetry(ctx context.Context) error {
 		case <-time.After(c.cfg.ReconnectDelay):
 		}
 	}
+
 	return fmt.Errorf("rabbitmq: failed to connect after %d attempts: %w", c.cfg.ReconnectAttempts, lastErr)
 }
 

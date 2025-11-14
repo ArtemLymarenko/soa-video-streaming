@@ -27,7 +27,7 @@ type userRegistrar struct {
 	svc pb.UserServiceServer
 }
 
-func newRegistrar(svc *grpcCtrl.UserController) *userRegistrar {
+func newRegistrar(svc *grpcCtrl.UsersController) *userRegistrar {
 	return &userRegistrar{
 		svc: svc,
 	}
