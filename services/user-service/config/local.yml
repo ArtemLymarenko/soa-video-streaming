@@ -1,3 +1,6 @@
+auth:
+  jwt_secret_key: "my_super_scret_key"
+  jwt_ttl: 1d
 http:
   addr: localhost:8080
 grpc:

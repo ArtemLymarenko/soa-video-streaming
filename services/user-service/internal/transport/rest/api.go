@@ -17,8 +17,8 @@ func Module() fx.Option {
 }
 
 const (
-	SignInEndpoint = "/signin"
-	SignUpEndpoint = "/signup"
+	SignInEndpoint = "/sign-in"
+	SignUpEndpoint = "/sign-up"
 )
 
 func NewGinEngine(users *rest.UsersController) *gin.Engine {

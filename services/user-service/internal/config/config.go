@@ -6,12 +6,18 @@ import (
 	"soa-video-streaming/pkg/httpsrv"
 	"soa-video-streaming/pkg/postgres"
 	"soa-video-streaming/pkg/rabbitmq"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 )
 
 type AppConfig struct {
+	Auth struct {
+		JwtSecretKey string        `mapstructure:"jwt_secret_key"`
+		JwtTTL       time.Duration `mapstructure:"jwt_ttl"`
+	} `mapstructure:"auth"`
+
 	GRPC struct {
 		grpcsrv.Config `mapstructure:",squash"`
 	} `mapstructure:"grpc"`

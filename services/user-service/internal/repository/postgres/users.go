@@ -70,9 +70,9 @@ func (r *UsersRepository) FindByEmail(ctx context.Context, email string) (entity
 
 func (r *UsersRepository) Save(ctx context.Context, user entity.User) error {
 	err := r.client.Tx(ctx, func(tx pgx.Tx) error {
-		q := `INSERT INTO users(id, email, password, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`
+		q := `INSERT INTO users(id, email, password) VALUES ($1, $2, $3)`
 
-		_, err := tx.Exec(ctx, q, user.Id, user.Email, user.Password, user.CreatedAt, user.UpdatedAt)
+		_, err := tx.Exec(ctx, q, user.Id, user.Email, user.Password)
 		if err != nil {
 			return err
 		}

@@ -2,9 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"soa-video-streaming/services/user-service/internal/domain/entity"
 	"soa-video-streaming/services/user-service/internal/repository/postgres"
 )
+
+var ErrUserNotFound = errors.New("user not found")
 
 type UsersService struct {
 	usersRepo    *postgres.UsersRepository
@@ -19,5 +23,10 @@ func NewUsersService(u *postgres.UsersRepository, ui *postgres.UserInfoRepositor
 }
 
 func (u *UsersService) GetUserByID(ctx context.Context, id string) (entity.User, error) {
-	return entity.User{}, nil
+	user, err := u.usersRepo.FindById(ctx, id)
+	if err != nil {
+		return entity.User{}, fmt.Errorf("%w: %v", ErrUserNotFound, err)
+	}
+
+	return user, nil
 }
