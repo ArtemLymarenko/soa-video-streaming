@@ -1,73 +1,54 @@
 package rest
 
 import (
+	"errors"
 	"net/http"
-	"soa-video-streaming/pkg/cookie"
-	"soa-video-streaming/services/user-service/internal/config"
 	"soa-video-streaming/services/user-service/internal/controller/rest/dto"
-	"soa-video-streaming/services/user-service/internal/domain/entity"
 	"soa-video-streaming/services/user-service/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type UsersController struct {
-	authService *service.AuthService
-	cfg         *config.AppConfig
+	usersService *service.UsersService
 }
 
-func NewUsersController(authService *service.AuthService, cfg *config.AppConfig) *UsersController {
+func NewUsersController(u *service.UsersService) *UsersController {
 	return &UsersController{
-		authService: authService,
-		cfg:         cfg,
+		usersService: u,
 	}
 }
 
-func (c *UsersController) SignUp(gc *gin.Context) {
-	var req dto.SignUpRequest
+func (c *UsersController) AddPreferenceCategories(gc *gin.Context) {
+	var req dto.AddPreferenceCategoriesRequest
+
 	if err := gc.ShouldBindJSON(&req); err != nil {
-		gc.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		gc.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
 		return
 	}
 
-	user := entity.User{
-		Email:    req.Email,
-		Password: req.Password,
-		UserInfo: entity.UserInfo{
-			FirstName: req.FirstName,
-			LastName:  req.LastName,
-		},
+	if err := dto.GetValidator().Struct(req); err != nil {
+		gc.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
 	}
 
-	authRes, err := c.authService.SignUp(gc, user)
-	if err != nil {
+	userID := gc.GetString("user_id")
+	if userID == "" {
+		gc.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	if err := c.usersService.AddPreferenceCategories(gc, userID, req.CategoryIDs); err != nil {
+		if errors.Is(err, service.ErrCategoryNotFound) {
+			gc.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	cookie.SetAccessToken(gc, authRes.AccessToken, c.cfg.Auth.JwtTTL)
-
-	gc.JSON(http.StatusOK, dto.SignUpResponse{
-		AccessToken: authRes.AccessToken,
-	})
-}
-
-func (c *UsersController) SignIn(gc *gin.Context) {
-	var req dto.SignInRequest
-	if err := gc.ShouldBindJSON(&req); err != nil {
-		gc.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	authRes, err := c.authService.SignIn(gc, req.Email, req.Password)
-	if err != nil {
-		gc.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	cookie.SetAccessToken(gc, authRes.AccessToken, c.cfg.Auth.JwtTTL)
-
-	gc.JSON(http.StatusOK, dto.SignInResponse{
-		AccessToken: authRes.AccessToken,
+	gc.JSON(http.StatusOK, dto.AddPreferenceCategoriesResponse{
+		Status: "ok",
 	})
 }

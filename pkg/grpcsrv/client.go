@@ -2,7 +2,6 @@ package grpcsrv
 
 import (
 	"context"
-	"os"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
@@ -12,25 +11,15 @@ import (
 
 func ClientModule() fx.Option {
 	return fx.Options(
-		fx.Provide(NewClientConfig),
 		fx.Provide(NewClientConn),
 	)
 }
 
 type ClientConfig struct {
-	Target string
+	Target string `mapstructure:"target"`
 }
 
-func NewClientConfig() ClientConfig {
-	target := os.Getenv("GRPC_TARGET")
-	if target == "" {
-		target = "127.0.0.1:50051"
-	}
-
-	return ClientConfig{Target: target}
-}
-
-func NewClientConn(lc fx.Lifecycle, cfg ClientConfig) (*grpc.ClientConn, error) {
+func NewClientConn(lc fx.Lifecycle, cfg *ClientConfig) (*grpc.ClientConn, error) {
 	conn, err := grpc.NewClient(
 		cfg.Target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),

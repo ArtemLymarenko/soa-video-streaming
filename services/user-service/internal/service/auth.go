@@ -31,10 +31,6 @@ type AuthResult struct {
 }
 
 func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult, error) {
-	if err := user.Validate(); err != nil {
-		return AuthResult{}, err
-	}
-
 	actualUser, err := a.usersRepo.FindByEmail(ctx, user.Email)
 	if err != nil {
 		return AuthResult{}, err
@@ -99,4 +95,16 @@ func (a *AuthService) generateAccessToken(user entity.User) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(a.jwtSecretKey))
+}
+
+func (a *AuthService) ParseToken(token string) (jwt.MapClaims, error) {
+	t, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		return a.jwtSecretKey, nil
+	})
+
+	if err != nil || !t.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return t.Claims.(jwt.MapClaims), nil
 }

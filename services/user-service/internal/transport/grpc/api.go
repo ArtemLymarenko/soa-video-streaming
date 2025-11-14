@@ -6,7 +6,7 @@ import (
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 
-	pb "soa-video-streaming/pkg/pb/user"
+	userpb "soa-video-streaming/pkg/pb/user"
 	grpcCtrl "soa-video-streaming/services/user-service/internal/controller/grpc"
 )
 
@@ -24,7 +24,7 @@ func Module() fx.Option {
 }
 
 type userRegistrar struct {
-	svc pb.UserServiceServer
+	svc userpb.UserServiceServer
 }
 
 func newRegistrar(svc *grpcCtrl.UsersController) *userRegistrar {
@@ -34,5 +34,5 @@ func newRegistrar(svc *grpcCtrl.UsersController) *userRegistrar {
 }
 
 func (r *userRegistrar) Register(s *grpc.Server) {
-	pb.RegisterUserServiceServer(s, r.svc)
+	userpb.RegisterUserServiceServer(s, r.svc)
 }
