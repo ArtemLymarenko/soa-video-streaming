@@ -3,24 +3,33 @@ package grpc
 import (
 	"context"
 	pb "soa-video-streaming/pkg/pb/user"
-	"time"
+	"soa-video-streaming/services/user-service/internal/service"
 )
 
 type UsersController struct {
 	pb.UnsafeUserServiceServer
+
+	userService *service.UsersService
 }
 
-func NewUserController() *UsersController {
-	return &UsersController{}
+func NewUserController(userService *service.UsersService) *UsersController {
+	return &UsersController{
+		userService: userService,
+	}
 }
 
 func (u *UsersController) GetUserInfoByID(ctx context.Context, req *pb.GetUserInfoByIDRequest) (*pb.GetUserInfoByIDResponse, error) {
+	user, err := u.userService.GetUserByID(ctx, req.GetId())
+	if err != nil {
+		return nil, err
+	}
+
 	return &pb.GetUserInfoByIDResponse{
 		User: &pb.User{
-			Id:        req.GetId(),
-			Email:     "some@email.com",
-			Name:      "name",
-			CreatedAt: time.Now().Unix(),
+			Id:        user.Id,
+			Email:     user.Email,
+			Name:      user.FirstName + " " + user.LastName,
+			CreatedAt: user.CreatedAt.Unix(),
 		},
 	}, nil
 }
