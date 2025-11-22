@@ -1,27 +1,20 @@
 package rest
 
 import (
-	"context"
 	"net/http"
 	"soa-video-streaming/services/content-service/internal/controller/rest/dto"
 	"soa-video-streaming/services/content-service/internal/domain/entity"
+	"soa-video-streaming/services/content-service/internal/service"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-type MediaContentService interface {
-	Create(ctx context.Context, m entity.MediaContent) error
-	GetByID(ctx context.Context, id string) (*entity.MediaContent, error)
-	Delete(ctx context.Context, id string) error
-	GetRecommendations(ctx context.Context, userID string, limit int64) ([]entity.MediaContent, error)
-}
-
 type MediaContentController struct {
-	service MediaContentService
+	service *service.MediaContentService
 }
 
-func NewMediaContentController(service MediaContentService) *MediaContentController {
+func NewMediaContentController(service *service.MediaContentService) *MediaContentController {
 	return &MediaContentController{service: service}
 }
 
@@ -29,7 +22,6 @@ func (c *MediaContentController) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.POST("", c.Create)
 	rg.GET("/:id", c.GetByID)
 	rg.DELETE("/:id", c.Delete)
-	rg.GET("/recommendations/:userId", c.GetRecommendations)
 }
 
 func (c *MediaContentController) Create(ctx *gin.Context) {
@@ -86,27 +78,4 @@ func (c *MediaContentController) Delete(ctx *gin.Context) {
 	}
 
 	ctx.Status(http.StatusNoContent)
-}
-
-const DefaultRecommendationsLimit = 10
-
-func (c *MediaContentController) GetRecommendations(ctx *gin.Context) {
-	userID := ctx.Param("userId")
-	limit := ctx.GetInt64("limit")
-	if limit == 0 {
-		limit = DefaultRecommendationsLimit
-	}
-
-	recommendations, err := c.service.GetRecommendations(ctx, userID, limit)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	if recommendations == nil {
-		ctx.JSON(http.StatusOK, []dto.RecommendationResponse{})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, dto.ToRecommendationResponses(recommendations))
 }

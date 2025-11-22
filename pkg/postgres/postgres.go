@@ -15,6 +15,7 @@ import (
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(NewClient),
+		fx.Provide(ProvidePGXPool),
 		fx.Provide(
 			fx.Annotate(
 				ProvidePGXPool,

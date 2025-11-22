@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	grpcsrv "soa-video-streaming/pkg/grpcsrv"
+	"soa-video-streaming/pkg/grpcsrv"
 	"soa-video-streaming/pkg/httpsrv"
+	"soa-video-streaming/pkg/postgres"
 	"soa-video-streaming/services/content-service/internal/config"
-	"soa-video-streaming/services/content-service/internal/repository/postgres"
+	postgresRepos "soa-video-streaming/services/content-service/internal/repository/postgres"
 	"soa-video-streaming/services/content-service/internal/service"
 	grpctransport "soa-video-streaming/services/content-service/internal/transport/grpc"
 	"soa-video-streaming/services/content-service/internal/transport/rest"
@@ -20,7 +21,9 @@ func main() {
 		config.Module(),
 		httpsrv.Module(),
 		postgres.Module(),
+		postgresRepos.Module(),
 		grpcsrv.Module(),
+		grpcsrv.ClientModule(),
 		service.Module(),
 		rest.Module(),
 		grpctransport.ClientModule(),

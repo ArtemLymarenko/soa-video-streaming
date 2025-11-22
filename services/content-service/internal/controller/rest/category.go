@@ -1,27 +1,19 @@
 package rest
 
 import (
-	"context"
 	"net/http"
 	"soa-video-streaming/services/content-service/internal/controller/rest/dto"
 	"soa-video-streaming/services/content-service/internal/domain/entity"
+	"soa-video-streaming/services/content-service/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
-type CategoryService interface {
-	Create(ctx context.Context, c entity.Category) error
-	GetByID(ctx context.Context, id entity.CategoryID) (*entity.Category, error)
-	Update(ctx context.Context, c entity.Category) error
-	Delete(ctx context.Context, id entity.CategoryID) error
-	GetByTimestamp(ctx context.Context, from, to int64) ([]entity.Category, error)
-}
-
 type CategoryController struct {
-	service CategoryService
+	service *service.CategoryService
 }
 
-func NewCategoryController(service CategoryService) *CategoryController {
+func NewCategoryController(service *service.CategoryService) *CategoryController {
 	return &CategoryController{service: service}
 }
 

@@ -1,5 +1,5 @@
 http:
-  addr: localhost:8081
+  addr: localhost:8082
 grpc:
   addr: localhost:8082
 rabbitmq:
@@ -8,8 +8,11 @@ rabbitmq:
   reconnect_delay: 30s
   prefetch_count: 0
 postgres:
-  dsn: ""
+  dsn: "postgres://postgres:password@localhost:5432/postgres?sslmode=disable"
   min_conns: 0
   max_conns: 5
   conn_max_idle: 1m
   health_check_int: 1m
+grpc_client:
+  users:
+    target: "grpc://localhost:8081"

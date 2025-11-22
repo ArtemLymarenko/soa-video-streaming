@@ -105,18 +105,6 @@ func (a *AuthService) generateAccessToken(user entity.User) (string, error) {
 	return token.SignedString([]byte(a.jwtSecretKey))
 }
 
-func (a *AuthService) ParseToken(token string) (jwt.MapClaims, error) {
-	t, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
-		return a.jwtSecretKey, nil
-	})
-
-	if err != nil || !t.Valid {
-		return nil, errors.New("invalid token")
-	}
-
-	return t.Claims.(jwt.MapClaims), nil
-}
-
 func (a *AuthService) SendUserSignUpEvent(user *entity.User) {
 	reqCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
