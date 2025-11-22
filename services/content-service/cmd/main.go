@@ -25,6 +25,5 @@ func main() {
 		rest.Module(),
 		grpctransport.ClientModule(),
 		grpctransport.Module(),
-		fx.Invoke(config.Invoke),
 	).Run()
 }

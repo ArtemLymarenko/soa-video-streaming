@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"soa-video-streaming/pkg/httpsrv"
+	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/notification-service/internal/config"
-	ctrlV1 "soa-video-streaming/services/notification-service/internal/controller/v1"
+	"soa-video-streaming/services/notification-service/internal/service"
 
 	"go.uber.org/fx"
 )
@@ -15,7 +16,7 @@ func main() {
 	fx.New(
 		config.Module(),
 		httpsrv.Module(),
-		ctrlV1.Module(),
-		fx.Invoke(config.Invoke),
+		rabbitmq.Module(),
+		service.Module(),
 	).Run()
 }

@@ -1,0 +1,7 @@
+http:
+  addr: localhost:8080
+rabbitmq:
+  url: "amqp://admin:admin@localhost:5672/"
+  reconnect_attempts: 2
+  reconnect_delay: 30s
+  prefetch_count: 0

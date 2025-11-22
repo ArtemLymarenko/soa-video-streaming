@@ -2,13 +2,17 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"soa-video-streaming/pkg/rabbitmq"
+	"soa-video-streaming/services/notification-service/pkg/notifications"
 	"soa-video-streaming/services/user-service/internal/config"
 	"soa-video-streaming/services/user-service/internal/domain/entity"
 	"soa-video-streaming/services/user-service/internal/repository/postgres"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -16,13 +20,15 @@ type AuthService struct {
 	usersRepo    *postgres.UsersRepository
 	jwtSecretKey string
 	ttl          time.Duration
+	publisher    *rabbitmq.Publisher
 }
 
-func NewAuthService(usersRepo *postgres.UsersRepository, cfg *config.AppConfig) *AuthService {
+func NewAuthService(usersRepo *postgres.UsersRepository, cfg *config.AppConfig, publisher *rabbitmq.Publisher) *AuthService {
 	return &AuthService{
 		usersRepo:    usersRepo,
 		jwtSecretKey: cfg.Auth.JwtSecretKey,
 		ttl:          cfg.Auth.JwtTTL,
+		publisher:    publisher,
 	}
 }
 
@@ -56,6 +62,8 @@ func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult,
 	if err != nil {
 		return AuthResult{}, err
 	}
+
+	go a.SendUserSignUpEvent(&user)
 
 	return AuthResult{
 		AccessToken: token,
@@ -107,4 +115,32 @@ func (a *AuthService) ParseToken(token string) (jwt.MapClaims, error) {
 	}
 
 	return t.Claims.(jwt.MapClaims), nil
+}
+
+func (a *AuthService) SendUserSignUpEvent(user *entity.User) {
+	reqCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	event := notifications.EventSignUp{
+		UserID:    user.Id,
+		Email:     user.Email,
+		Message:   "New user registered successfully",
+		CreatedAt: time.Now(),
+	}
+
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to marshal signup event")
+		return
+	}
+
+	if err := a.publisher.PublishJSON(reqCtx, eventJSON); err != nil {
+		logrus.WithError(err).Error("Failed to publish signup event")
+		return
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"user_id": user.Id,
+		"email":   event.Email,
+	}).Info("Signup event published successfully")
 }
