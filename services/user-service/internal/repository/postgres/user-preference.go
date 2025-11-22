@@ -29,3 +29,24 @@ func (r *UserPreference) AddPreferredCategories(ctx context.Context, userID stri
 	_, err := r.db.Exec(ctx, q, userID, categoryIDs)
 	return err
 }
+
+func (r *UserPreference) GetUserPreferredCategories(ctx context.Context, userID string) ([]string, error) {
+	q := `SELECT category_id FROM user_preferred_categories WHERE user_id = $1`
+
+	rows, err := r.db.Query(ctx, q, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categoryIDs []string
+	for rows.Next() {
+		var categoryID string
+		if err := rows.Scan(&categoryID); err != nil {
+			return nil, err
+		}
+		categoryIDs = append(categoryIDs, categoryID)
+	}
+
+	return categoryIDs, nil
+}

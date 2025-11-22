@@ -15,7 +15,7 @@ type MediaContent struct {
 	Description string
 	Type        MediaContentType
 	Duration    int
-	Categories  []CategoryID
+	Categories  []Category
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

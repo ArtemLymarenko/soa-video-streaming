@@ -59,3 +59,12 @@ func (u *UsersService) AddPreferenceCategories(ctx context.Context, userID strin
 
 	return nil
 }
+
+func (u *UsersService) GetUserCategories(ctx context.Context, userID string) ([]string, error) {
+	categories, err := u.userPreference.GetUserPreferredCategories(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrUserCategoriesNotSet, err)
+	}
+
+	return categories, nil
+}

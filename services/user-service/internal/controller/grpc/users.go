@@ -33,3 +33,14 @@ func (u *UsersController) GetUserInfoByID(ctx context.Context, req *pb.GetUserIn
 		},
 	}, nil
 }
+
+func (u *UsersController) GetUserCategories(ctx context.Context, req *pb.GetUserCategoriesRequest) (*pb.GetUserCategoriesResponse, error) {
+	categories, err := u.userService.GetUserCategories(ctx, req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetUserCategoriesResponse{
+		CategoryIds: categories,
+	}, nil
+}

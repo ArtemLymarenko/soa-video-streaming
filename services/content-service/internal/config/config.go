@@ -2,21 +2,22 @@ package config
 
 import (
 	"soa-video-streaming/pkg/config"
+	"soa-video-streaming/pkg/httpsrv"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 )
 
 type AppConfig struct {
-	config.BaseHTTPServerConfig `mapstructure:",squash"`
+	httpsrv.Config `mapstructure:",squash"`
 }
 
 func NewAppConfig() (*AppConfig, error) {
 	return config.NewViper[AppConfig]()
 }
 
-func ProvideHTTPConfig(ac *AppConfig) *config.BaseHTTPServerConfig {
-	return &ac.BaseHTTPServerConfig
+func ProvideHTTPConfig(ac *AppConfig) *httpsrv.Config {
+	return &ac.Config
 }
 
 func Module() fx.Option {

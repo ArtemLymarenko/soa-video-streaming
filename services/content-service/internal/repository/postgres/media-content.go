@@ -43,36 +43,34 @@ func (r *MediaContentRepository) Create(ctx context.Context, m entity.MediaConte
 		return err
 	}
 
-	if len(m.Categories) == 0 {
-		return tx.Commit(ctx)
-	}
+	if len(m.Categories) > 0 {
+		catIDs := make([]string, len(m.Categories))
+		for i, c := range m.Categories {
+			catIDs[i] = string(c.ID)
+		}
 
-	catIDs := make([]string, len(m.Categories))
-	for i, c := range m.Categories {
-		catIDs[i] = string(c)
-	}
+		const insertCategories = `
+			INSERT INTO media_content_categories (media_content_id, category_id)
+			SELECT $1, unnest($2::text[])
+		`
 
-	const insertCategories = `
-		INSERT INTO media_content_categories (media_content_id, category_id)
-		SELECT $1, unnest($2::text[])
-	`
-
-	_, err = tx.Exec(ctx, insertCategories, m.ID, catIDs)
-	if err != nil {
-		return err
+		_, err = tx.Exec(ctx, insertCategories, m.ID, catIDs)
+		if err != nil {
+			return err
+		}
 	}
 
 	return tx.Commit(ctx)
 }
 
 func (r *MediaContentRepository) GetByID(ctx context.Context, id string) (*entity.MediaContent, error) {
-	q := `
+	qMedia := `
 		SELECT id, name, description, type, duration, created_at, updated_at
 		FROM media_content
 		WHERE id = $1
 	`
 
-	row := r.db.QueryRow(ctx, q, id)
+	row := r.db.QueryRow(ctx, qMedia, id)
 
 	var m entity.MediaContent
 	if err := row.Scan(
@@ -90,24 +88,29 @@ func (r *MediaContentRepository) GetByID(ctx context.Context, id string) (*entit
 		return nil, err
 	}
 
-	catRows, err := r.db.Query(ctx,
-		`SELECT category_id FROM media_content_categories WHERE media_content_id = $1`,
-		id,
-	)
+	qCategories := `
+		SELECT c.id, c.name, c.description
+		FROM categories c
+		JOIN media_content_categories mcc ON c.id = mcc.category_id
+		WHERE mcc.media_content_id = $1
+	`
+
+	rows, err := r.db.Query(ctx, qCategories, id)
 	if err != nil {
 		return nil, err
 	}
-	defer catRows.Close()
+	defer rows.Close()
 
-	for catRows.Next() {
-		var cid entity.CategoryID
-		if err := catRows.Scan(&cid); err != nil {
+	for rows.Next() {
+		var c entity.Category
+		if err := rows.Scan(&c.ID, &c.Name, &c.Description); err != nil {
 			return nil, err
 		}
-		m.Categories = append(m.Categories, cid)
+
+		m.Categories = append(m.Categories, c)
 	}
 
-	if err := catRows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 

@@ -22,4 +22,15 @@ message GetUserInfoByIDResponse {
 service UserService {
   rpc GetUserInfoByID(GetUserInfoByIDRequest)
       returns (GetUserInfoByIDResponse);
+
+  rpc GetUserCategories(GetUserCategoriesRequest)
+      returns (GetUserCategoriesResponse);
+}
+
+message GetUserCategoriesRequest {
+  string user_id = 1;
+}
+
+message GetUserCategoriesResponse {
+  repeated string category_ids = 1;
 }

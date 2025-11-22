@@ -4,7 +4,9 @@ import (
 	"flag"
 	"soa-video-streaming/pkg/httpsrv"
 	"soa-video-streaming/services/content-service/internal/config"
-	ctrlV1 "soa-video-streaming/services/content-service/internal/controller/v1"
+	"soa-video-streaming/services/content-service/internal/repository/postgres"
+	"soa-video-streaming/services/content-service/internal/service"
+	"soa-video-streaming/services/content-service/internal/transport/rest"
 
 	"go.uber.org/fx"
 )
@@ -15,8 +17,9 @@ func main() {
 	fx.New(
 		config.Module(),
 		httpsrv.Module(),
-		ctrlV1.Module(),
+		postgres.Module(),
+		service.Module(),
+		rest.Module(),
 		fx.Invoke(config.Invoke),
-		fx.Invoke(httpsrv.Invoke),
 	).Run()
 }
