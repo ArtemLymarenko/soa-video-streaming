@@ -7,8 +7,8 @@ import (
 	"go.uber.org/fx"
 )
 
-func ProvideSignUpPublisher(client *rabbitmq.Client) (*rabbitmq.Publisher, error) {
-	return client.NewPublisher("", notifications.SignUpEventQueueName, false, false)
+func ProvideSignUpPublisher(lc fx.Lifecycle, client *rabbitmq.Client) (*rabbitmq.Publisher, error) {
+	return client.NewPublisher(lc, "", notifications.SignUpEventQueueName)
 }
 
 func Module() fx.Option {

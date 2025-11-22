@@ -27,11 +27,13 @@ type Config struct {
 type Client struct {
 	conn *amqp.Connection
 	cfg  *Config
+	done chan struct{}
 }
 
 func NewClient(cfg *Config) (*Client, error) {
 	return &Client{
-		cfg: cfg,
+		cfg:  cfg,
+		done: make(chan struct{}),
 	}, nil
 }
 
@@ -56,6 +58,7 @@ func (c *Client) connectWithRetry(ctx context.Context) error {
 		conn, err := amqp.Dial(c.cfg.URL)
 		if err == nil {
 			c.conn = conn
+			close(c.done)
 			logrus.Infof("Connected to RabbitMQ: %v", c.cfg.URL)
 			return nil
 		}
@@ -128,7 +131,6 @@ func (c *Client) DeclareQueue(name string, opts QueueOptions) (amqp.Queue, *amqp
 }
 
 type Publisher struct {
-	client     *Client
 	ch         *amqp.Channel
 	exchange   string
 	routingKey string
@@ -136,14 +138,33 @@ type Publisher struct {
 	immediate  bool
 }
 
-func (c *Client) NewPublisher(exchange, routingKey string, mandatory, immediate bool) (*Publisher, error) {
-	return &Publisher{
-		client:     c,
+func (c *Client) NewPublisher(lc fx.Lifecycle, exchange, routingKey string) (*Publisher, error) {
+	p := &Publisher{
 		exchange:   exchange,
 		routingKey: routingKey,
-		mandatory:  mandatory,
-		immediate:  immediate,
-	}, nil
+	}
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			<-c.done
+			ch, err := c.newChannel()
+			if err == nil {
+				p.ch = ch
+				logrus.Infof("Publisher initialized (exchange: %s)", exchange)
+				return nil
+			}
+
+			return err
+		},
+		OnStop: func(ctx context.Context) error {
+			if p.ch != nil {
+				return p.ch.Close()
+			}
+			return nil
+		},
+	})
+
+	return p, nil
 }
 
 func (p *Publisher) PublishJSON(ctx context.Context, body []byte) error {
