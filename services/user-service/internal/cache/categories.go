@@ -49,7 +49,7 @@ func RunCategoryCollector(
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go cache.RunCollector(ctx, collector, func() (int64, error) {
-				maxTs, err := client.GetMaxTimestamp(ctx, &contentpb.GetMaxTimestampRequest{})
+				maxTs, err := client.GetMaxTimestamp(context.Background(), &contentpb.GetMaxTimestampRequest{})
 				return maxTs.GetMaxTimestamp(), err
 			})
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/google/uuid"
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/notification-service/pkg/notifications"
 	"soa-video-streaming/services/user-service/internal/config"
@@ -51,6 +52,7 @@ func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult,
 		return AuthResult{}, err
 	}
 
+	user.Id = uuid.NewString()
 	user.Password = string(hashed)
 
 	err = a.usersRepo.Save(ctx, user)

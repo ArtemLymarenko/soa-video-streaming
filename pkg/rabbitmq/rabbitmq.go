@@ -13,7 +13,7 @@ import (
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(NewClient),
-		fx.Invoke(Run),
+		fx.Invoke(func(c *Client) {}),
 	)
 }
 
@@ -30,14 +30,12 @@ type Client struct {
 	done chan struct{}
 }
 
-func NewClient(cfg *Config) (*Client, error) {
-	return &Client{
+func NewClient(lc fx.Lifecycle, cfg *Config) (*Client, error) {
+	c := &Client{
 		cfg:  cfg,
 		done: make(chan struct{}),
-	}, nil
-}
+	}
 
-func Run(lc fx.Lifecycle, c *Client) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			return c.connectWithRetry(ctx)
@@ -50,6 +48,8 @@ func Run(lc fx.Lifecycle, c *Client) {
 			return nil
 		},
 	})
+
+	return c, nil
 }
 
 func (c *Client) connectWithRetry(ctx context.Context) error {

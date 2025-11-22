@@ -3,12 +3,12 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/fx"
 )
 
@@ -22,7 +22,7 @@ func Module() fx.Option {
 				fx.As(new(DB)),
 			),
 		),
-		fx.Invoke(Run),
+		fx.Invoke(func(c *Client) {}),
 	)
 }
 
@@ -45,41 +45,42 @@ type Client struct {
 	cfg  *Config
 }
 
-func NewClient(cfg *Config) (*Client, error) {
-	return &Client{
-		cfg: cfg,
-	}, nil
-}
+func NewClient(lc fx.Lifecycle, cfg *Config) (*Client, error) {
+	config, err := pgxpool.ParseConfig(cfg.DSN)
+	if err != nil {
+		return nil, fmt.Errorf("parse DSN: %w", err)
+	}
 
-func Run(lc fx.Lifecycle, c *Client) {
+	config.MaxConns = cfg.MaxConns
+	config.MinConns = cfg.MinConns
+	config.MaxConnIdleTime = cfg.ConnMaxIdle
+	config.HealthCheckPeriod = cfg.HealthCheckInt
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	if err != nil {
+		return nil, fmt.Errorf("pgx connect: %w", err)
+	}
+
+	err = pool.Ping(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("ping: %w", err)
+	}
+
+	logrus.Info("Connected to PostgreSQL")
+
+	c := &Client{
+		Pool: pool,
+		cfg:  cfg,
+	}
 	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			config, err := pgxpool.ParseConfig(c.cfg.DSN)
-			if err != nil {
-				return fmt.Errorf("parse DSN: %w", err)
-			}
-
-			config.MaxConns = c.cfg.MaxConns
-			config.MinConns = c.cfg.MinConns
-			config.MaxConnIdleTime = c.cfg.ConnMaxIdle
-			config.HealthCheckPeriod = c.cfg.HealthCheckInt
-
-			pool, err := pgxpool.NewWithConfig(ctx, config)
-			if err != nil {
-				return fmt.Errorf("pgx connect: %w", err)
-			}
-
-			c.Pool = pool
-
-			logrus.Info("Connected to PostgreSQL")
-			return nil
-		},
 		OnStop: func(ctx context.Context) error {
 			logrus.Info("Closing PostgreSQL connection")
 			c.Pool.Close()
 			return nil
 		},
 	})
+
+	return c, nil
 }
 
 func ProvidePGXPool(c *Client) *pgxpool.Pool {

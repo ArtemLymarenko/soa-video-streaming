@@ -71,16 +71,12 @@ func (c *CollectorCache[K, V]) RunCollector(
 
 	for {
 		select {
-		case <-ctx.Done():
-			logrus.Infof("Cache collector (%s) stopped", c.name)
-			return
 		case <-ticker.C:
 			err := c.runCollect(collectorFunc, maxTSFunc, postCollectionFuncs...)
 			if err != nil {
 				logrus.WithField("entity", c.name).WithError(err).Error("Failed to collect items")
 			}
 		}
-
 	}
 }
 

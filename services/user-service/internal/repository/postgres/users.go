@@ -53,8 +53,8 @@ func (r *UsersRepository) findOne(ctx context.Context, query string, args ...int
 const findQuery = `SELECT
 		u.id, u.email, u.password, u.created_at, u.updated_at,
 		ui.first_name, ui.last_name, ui.created_at, ui.updated_at
-		FROM users AS u
-		INNER JOIN user_info AS ui ON u.id = ui.user_id
+		FROM user_service.users AS u
+		INNER JOIN user_service.user_info AS ui ON u.id = ui.user_id
 		WHERE %s = $1`
 
 func (r *UsersRepository) FindById(ctx context.Context, id string) (entity.User, error) {
@@ -69,7 +69,7 @@ func (r *UsersRepository) FindByEmail(ctx context.Context, email string) (entity
 
 func (r *UsersRepository) Save(ctx context.Context, user entity.User) error {
 	err := r.client.Tx(ctx, func(tx pgx.Tx) error {
-		q := `INSERT INTO users(id, email, password) VALUES ($1, $2, $3)`
+		q := `INSERT INTO user_service.users(id, email, password) VALUES ($1, $2, $3)`
 
 		_, err := tx.Exec(ctx, q, user.Id, user.Email, user.Password)
 		if err != nil {

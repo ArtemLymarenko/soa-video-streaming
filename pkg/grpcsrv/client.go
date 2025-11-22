@@ -12,6 +12,7 @@ import (
 func ClientModule() fx.Option {
 	return fx.Options(
 		fx.Provide(NewClientConn),
+		fx.Invoke(func(c *ClientConfig) {}),
 	)
 }
 
