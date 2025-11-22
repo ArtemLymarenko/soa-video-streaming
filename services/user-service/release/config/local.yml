@@ -1,6 +1,6 @@
 auth:
   jwt_secret_key: "my_super_scret_key"
-  jwt_ttl: 1d
+  jwt_ttl: 24h
 http:
   addr: localhost:8080
 grpc:
@@ -11,8 +11,11 @@ rabbitmq:
   reconnect_delay: 30s
   prefetch_count: 0
 postgres:
-  dsn: ""
+  dsn: "postgres://postgres:password@localhost:5432/postgres?sslmode=disable"
   min_conns: 0
   max_conns: 5
   conn_max_idle: 1m
   health_check_int: 1m
+grpc_client:
+  categories:
+    target: "grpc://localhost:8082"

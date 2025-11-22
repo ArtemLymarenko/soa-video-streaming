@@ -8,7 +8,6 @@ import (
 	"soa-video-streaming/services/user-service/internal/domain/entity"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UsersRepository struct {
@@ -17,7 +16,7 @@ type UsersRepository struct {
 	userInfoRepo *UserInfoRepository
 }
 
-func NewUsersRepository(db *pgxpool.Pool, client *postgres.Client, userInfoRepo *UserInfoRepository) *UsersRepository {
+func NewUsersRepository(db postgres.DB, client *postgres.Client, userInfoRepo *UserInfoRepository) *UsersRepository {
 	return &UsersRepository{
 		db:           db,
 		userInfoRepo: userInfoRepo,

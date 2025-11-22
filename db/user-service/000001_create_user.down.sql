@@ -1,6 +1,6 @@
 -- Drop triggers
-DROP TRIGGER IF EXISTS update_user_info_updated_at ON user_info;
-DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP TRIGGER IF EXISTS update_user_info_updated_at ON user_service.user_info;
+DROP TRIGGER IF EXISTS update_users_updated_at ON user_service.users;
 
 -- Drop trigger function
 DROP FUNCTION IF EXISTS update_updated_at_column();

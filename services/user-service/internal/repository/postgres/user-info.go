@@ -6,14 +6,13 @@ import (
 	"soa-video-streaming/services/user-service/internal/domain/entity"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserInfoRepository struct {
 	db postgres.DB
 }
 
-func NewUserInfoRepository(db *pgxpool.Pool) *UserInfoRepository {
+func NewUserInfoRepository(db postgres.DB) *UserInfoRepository {
 	return &UserInfoRepository{
 		db: db,
 	}

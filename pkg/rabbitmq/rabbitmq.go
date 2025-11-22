@@ -128,6 +128,7 @@ func (c *Client) DeclareQueue(name string, opts QueueOptions) (amqp.Queue, *amqp
 }
 
 type Publisher struct {
+	client     *Client
 	ch         *amqp.Channel
 	exchange   string
 	routingKey string
@@ -136,12 +137,8 @@ type Publisher struct {
 }
 
 func (c *Client) NewPublisher(exchange, routingKey string, mandatory, immediate bool) (*Publisher, error) {
-	ch, err := c.newChannel()
-	if err != nil {
-		return nil, err
-	}
 	return &Publisher{
-		ch:         ch,
+		client:     c,
 		exchange:   exchange,
 		routingKey: routingKey,
 		mandatory:  mandatory,

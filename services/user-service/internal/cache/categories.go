@@ -23,7 +23,7 @@ func NewCategoryCollector(client contentpb.CategoryServiceClient) cache.Collecto
 
 		req := &contentpb.GetCategoriesByTimestampRequest{
 			From: prev,
-			To:   next,
+			To:   time.Now().Unix(),
 		}
 
 		resp, err := client.GetCategoriesByTimestamp(ctx, req)
@@ -44,12 +44,15 @@ func RunCategoryCollector(
 	lc fx.Lifecycle,
 	cache *CategoryCache,
 	collector cache.CollectorFunc[string, struct{}],
+	client contentpb.CategoryServiceClient,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go cache.RunCollector(ctx, collector, func() (int64, error) {
-				return time.Now().Unix(), nil
+				maxTs, err := client.GetMaxTimestamp(ctx, &contentpb.GetMaxTimestampRequest{})
+				return maxTs.GetMaxTimestamp(), err
 			})
+
 			logrus.Info("Categories cache collector started")
 			return nil
 		},

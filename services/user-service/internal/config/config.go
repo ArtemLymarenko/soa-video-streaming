@@ -33,6 +33,12 @@ type AppConfig struct {
 	Postgres struct {
 		postgres.Config `mapstructure:",squash"`
 	} `mapstructure:"postgres"`
+
+	GPRCClient struct {
+		Categories struct {
+			grpcsrv.ClientConfig `mapstructure:",squash"`
+		} `mapstructure:"categories"`
+	} `mapstructure:"grpc_client"`
 }
 
 func NewAppConfig() (*AppConfig, error) {
@@ -55,6 +61,10 @@ func ProvidePostgresConfig(ac *AppConfig) *postgres.Config {
 	return &ac.Postgres.Config
 }
 
+func ProvideGRPCCategoriesConfig(ac *AppConfig) *grpcsrv.ClientConfig {
+	return &ac.GPRCClient.Categories.ClientConfig
+}
+
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
@@ -63,6 +73,7 @@ func Module() fx.Option {
 			ProvideGRPCConfig,
 			ProvideRabbitMQConfig,
 			ProvidePostgresConfig,
+			ProvideGRPCCategoriesConfig,
 		),
 		fx.Invoke(func(cfg *AppConfig) {
 			logrus.WithField("config", cfg).Info("Config loaded")
