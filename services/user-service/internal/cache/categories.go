@@ -13,7 +13,7 @@ import (
 type CategoryCache = cache.CollectorCache[string, struct{}]
 
 func NewCategoryCache() *CategoryCache {
-	return cache.NewCollectorCache[string, struct{}]()
+	return cache.NewCollectorCache[string, struct{}]("categories")
 }
 
 func NewCategoryCollector(client contentpb.CategoryServiceClient) cache.CollectorFunc[string, struct{}] {
@@ -47,7 +47,9 @@ func RunCategoryCollector(
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			go cache.RunCollector(ctx, collector)
+			go cache.RunCollector(ctx, collector, func() (int64, error) {
+				return time.Now().Unix(), nil
+			})
 			logrus.Info("Categories cache collector started")
 			return nil
 		},

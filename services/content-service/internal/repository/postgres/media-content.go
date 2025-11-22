@@ -122,3 +122,51 @@ func (r *MediaContentRepository) Delete(ctx context.Context, id string) error {
 	_, err := r.db.Exec(ctx, q, id)
 	return err
 }
+
+func (r *MediaContentRepository) GetRandomByCategories(
+	ctx context.Context,
+	categoryIDs []string,
+	limit int64,
+) ([]entity.MediaContent, error) {
+	if len(categoryIDs) == 0 {
+		return []entity.MediaContent{}, nil
+	}
+
+	q := `
+		SELECT DISTINCT mc.id, mc.name, mc.description, mc.type, mc.duration, mc.created_at, mc.updated_at
+		FROM media_content mc
+		JOIN media_content_categories mcc ON mc.id = mcc.media_content_id
+		WHERE mcc.category_id = ANY($1)
+		ORDER BY RANDOM()
+		LIMIT $2
+	`
+
+	rows, err := r.db.Query(ctx, q, categoryIDs, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mediaList []entity.MediaContent
+	for rows.Next() {
+		var m entity.MediaContent
+		if err := rows.Scan(
+			&m.ID,
+			&m.Name,
+			&m.Description,
+			&m.Type,
+			&m.Duration,
+			&m.CreatedAt,
+			&m.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		mediaList = append(mediaList, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return mediaList, nil
+}

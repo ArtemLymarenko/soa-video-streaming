@@ -26,14 +26,11 @@ func NewCategoryController(service CategoryService) *CategoryController {
 }
 
 func (c *CategoryController) RegisterRoutes(rg *gin.RouterGroup) {
-	categories := rg.Group("/categories")
-	{
-		categories.POST("", c.Create)
-		categories.GET("/:id", c.GetByID)
-		categories.PUT("/:id", c.Update)
-		categories.DELETE("/:id", c.Delete)
-		categories.GET("", c.GetByTimestamp)
-	}
+	rg.POST("", c.Create)
+	rg.GET("/:id", c.GetByID)
+	rg.PUT("/:id", c.Update)
+	rg.DELETE("/:id", c.Delete)
+	rg.GET("", c.GetByTimestamp)
 }
 
 func (c *CategoryController) Create(ctx *gin.Context) {

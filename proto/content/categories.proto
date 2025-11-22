@@ -19,7 +19,16 @@ message GetCategoriesByTimestampResponse {
   repeated Category categories = 1;
 }
 
+message GetMaxTimestampRequest {}
+
+message GetMaxTimestampResponse {
+  int64 max_timestamp = 1;
+}
+
 service CategoryService {
   rpc GetCategoriesByTimestamp(GetCategoriesByTimestampRequest)
       returns (GetCategoriesByTimestampResponse);
+
+  rpc GetMaxTimestamp(GetMaxTimestampRequest)
+      returns (GetMaxTimestampResponse);
 }

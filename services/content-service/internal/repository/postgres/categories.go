@@ -80,3 +80,16 @@ func (r *CategoryRepository) GetByTimestamp(ctx context.Context, from, to int64)
 
 	return items, nil
 }
+
+func (r *CategoryRepository) GetMaxTimestamp(ctx context.Context) (int64, error) {
+	q := `SELECT COALESCE(MAX(updated_at), 0) FROM categories ORDER BY updated_at DESC LIMIT 1`
+
+	row := r.db.QueryRow(ctx, q)
+
+	var maxTimestamp int64
+	if err := row.Scan(&maxTimestamp); err != nil {
+		return 0, err
+	}
+
+	return maxTimestamp, nil
+}

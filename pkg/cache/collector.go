@@ -2,80 +2,134 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
-type CollectorCache[K comparable, V any] struct {
-	items   map[K]V
-	itemsMX sync.RWMutex
+const ResyncGapSeconds = 300
 
-	prev int64
-	next int64
+type CollectorCache[K comparable, V any] struct {
+	items  sync.Map
+	lastTS int64
+	name   string
 }
 
-func NewCollectorCache[K comparable, V any]() *CollectorCache[K, V] {
+func NewCollectorCache[K comparable, V any](name string) *CollectorCache[K, V] {
 	return &CollectorCache[K, V]{
-		items: make(map[K]V),
+		name: name,
 	}
 }
 
 func (c *CollectorCache[K, V]) Set(key K, value V) {
-	c.itemsMX.Lock()
-	defer c.itemsMX.Unlock()
-	c.items[key] = value
+	c.items.Store(key, value)
 }
 
 func (c *CollectorCache[K, V]) SetAll(items map[K]V) {
-	c.itemsMX.Lock()
-	defer c.itemsMX.Unlock()
-
 	for key, value := range items {
-		c.items[key] = value
+		c.items.Store(key, value)
 	}
 }
 
 func (c *CollectorCache[K, V]) Get(key K) (V, bool) {
-	c.itemsMX.RLock()
-	defer c.itemsMX.RUnlock()
-	t, ok := c.items[key]
-	return t, ok
+	value, ok := c.items.Load(key)
+	if !ok {
+		var zeroValue V
+		return zeroValue, false
+	}
+
+	return value.(V), true
+}
+
+func (c *CollectorCache[K, V]) ForEach(process func(k K, v V)) {
+	c.items.Range(func(k, v any) bool {
+		key, okKey := k.(K)
+		val, okVal := v.(V)
+		if okKey && okVal {
+			process(key, val)
+		}
+
+		return true
+	})
 }
 
 type CollectorFunc[K comparable, V any] func(prev, next int64) (map[K]V, error)
+type MaxTSFunc func() (int64, error)
 
-func (c *CollectorCache[K, V]) RunCollector(ctx context.Context, collectorFunc CollectorFunc[K, V]) {
-	logrus.Infof("Running cache collector")
+func (c *CollectorCache[K, V]) RunCollector(
+	ctx context.Context,
+	collectorFunc CollectorFunc[K, V],
+	maxTSFunc MaxTSFunc,
+	postCollectionFuncs ...func() error,
+) {
+	logrus.Infof("Starting cache collector (%s)", c.name)
+
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
+			logrus.Infof("Cache collector (%s) stopped", c.name)
 			return
-		default:
+		case <-ticker.C:
+			err := c.runCollect(collectorFunc, maxTSFunc, postCollectionFuncs...)
+			if err != nil {
+				logrus.WithField("entity", c.name).WithError(err).Error("Failed to collect items")
+			}
 		}
 
-		err := c.collect(collectorFunc)
-		if err != nil {
-			logrus.WithError(err).Errorf("Failed collec cache items")
-		}
-
-		time.Sleep(30 * time.Second)
 	}
 }
 
-func (c *CollectorCache[K, V]) collect(collectorFunc CollectorFunc[K, V]) error {
-	c.next = time.Now().Unix()
-
-	items, err := collectorFunc(c.prev, c.next)
+func (c *CollectorCache[K, V]) runCollect(
+	collectorFunc CollectorFunc[K, V],
+	maxTSFunc MaxTSFunc,
+	postCollectionFuncs ...func() error,
+) error {
+	lastTs := c.lastTS
+	maxTs, err := maxTSFunc()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get latest timestamp: %w", err)
 	}
 
-	c.prev = c.next
+	lastTsWithGap := lastTs
+	if lastTs > ResyncGapSeconds && time.Now().Unix()-lastTs < ResyncGapSeconds {
+		lastTsWithGap -= ResyncGapSeconds
+	}
+
+	if maxTs == lastTsWithGap {
+		return fmt.Errorf("no change in cache. Revision: %d: err: %v", lastTs, err)
+	}
+
+	start := time.Now()
+	items, err := collectorFunc(lastTsWithGap, time.Now().Unix())
+	if err != nil {
+		return fmt.Errorf("error collecting cache items: %v", err)
+	}
+
+	logrus.WithField("entity", c.name).Infof(
+		"Rows: %d. Took: %s, revision: %d / %d. Now: %v.",
+		len(items), time.Since(start), lastTs, maxTs, time.Now().Unix(),
+	)
 
 	c.SetAll(items)
+
+	now := time.Now().Unix()
+	if maxTs > now {
+		maxTs = now
+	}
+
+	c.lastTS = maxTs
+
+	for _, postFunc := range postCollectionFuncs {
+		err = postFunc()
+		if err != nil {
+			logrus.WithField("entity", c.name).WithError(err).Errorf("Error post collection function failed")
+		}
+	}
 
 	return nil
 }

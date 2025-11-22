@@ -33,3 +33,7 @@ func (s *CategoryService) Delete(ctx context.Context, id entity.CategoryID) erro
 func (s *CategoryService) GetByTimestamp(ctx context.Context, from, to int64) ([]entity.Category, error) {
 	return s.repo.GetByTimestamp(ctx, from, to)
 }
+
+func (c *CategoryService) GetMaxTimestamp(ctx context.Context) (int64, error) {
+	return c.repo.GetMaxTimestamp(ctx)
+}

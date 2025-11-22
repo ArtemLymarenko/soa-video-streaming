@@ -23,8 +23,10 @@ func NewGinEngine(
 ) *gin.Engine {
 	r := gin.Default()
 
-	category.RegisterRoutes(r.Group("/categories"))
-	media.RegisterRoutes(r.Group("/media"))
+	v1 := r.Group("/api/v1")
+
+	category.RegisterRoutes(v1.Group("/categories"))
+	media.RegisterRoutes(v1.Group("/media-content"))
 
 	return r
 }

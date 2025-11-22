@@ -17,6 +17,5 @@ func main() {
 		httpsrv.Module(),
 		ctrlV1.Module(),
 		fx.Invoke(config.Invoke),
-		fx.Invoke(httpsrv.Invoke),
 	).Run()
 }

@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	CategoryService_GetCategoriesByTimestamp_FullMethodName = "/content.v1.CategoryService/GetCategoriesByTimestamp"
+	CategoryService_GetMaxTimestamp_FullMethodName          = "/content.v1.CategoryService/GetMaxTimestamp"
 )
 
 // CategoryServiceClient is the client API for CategoryService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CategoryServiceClient interface {
 	GetCategoriesByTimestamp(ctx context.Context, in *GetCategoriesByTimestampRequest, opts ...grpc.CallOption) (*GetCategoriesByTimestampResponse, error)
+	GetMaxTimestamp(ctx context.Context, in *GetMaxTimestampRequest, opts ...grpc.CallOption) (*GetMaxTimestampResponse, error)
 }
 
 type categoryServiceClient struct {
@@ -47,11 +49,22 @@ func (c *categoryServiceClient) GetCategoriesByTimestamp(ctx context.Context, in
 	return out, nil
 }
 
+func (c *categoryServiceClient) GetMaxTimestamp(ctx context.Context, in *GetMaxTimestampRequest, opts ...grpc.CallOption) (*GetMaxTimestampResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMaxTimestampResponse)
+	err := c.cc.Invoke(ctx, CategoryService_GetMaxTimestamp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CategoryServiceServer is the server API for CategoryService service.
 // All implementations must embed UnimplementedCategoryServiceServer
 // for forward compatibility.
 type CategoryServiceServer interface {
 	GetCategoriesByTimestamp(context.Context, *GetCategoriesByTimestampRequest) (*GetCategoriesByTimestampResponse, error)
+	GetMaxTimestamp(context.Context, *GetMaxTimestampRequest) (*GetMaxTimestampResponse, error)
 	mustEmbedUnimplementedCategoryServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedCategoryServiceServer struct{}
 
 func (UnimplementedCategoryServiceServer) GetCategoriesByTimestamp(context.Context, *GetCategoriesByTimestampRequest) (*GetCategoriesByTimestampResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCategoriesByTimestamp not implemented")
+}
+func (UnimplementedCategoryServiceServer) GetMaxTimestamp(context.Context, *GetMaxTimestampRequest) (*GetMaxTimestampResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMaxTimestamp not implemented")
 }
 func (UnimplementedCategoryServiceServer) mustEmbedUnimplementedCategoryServiceServer() {}
 func (UnimplementedCategoryServiceServer) testEmbeddedByValue()                         {}
@@ -104,6 +120,24 @@ func _CategoryService_GetCategoriesByTimestamp_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CategoryService_GetMaxTimestamp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMaxTimestampRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CategoryServiceServer).GetMaxTimestamp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CategoryService_GetMaxTimestamp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CategoryServiceServer).GetMaxTimestamp(ctx, req.(*GetMaxTimestampRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CategoryService_ServiceDesc is the grpc.ServiceDesc for CategoryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var CategoryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCategoriesByTimestamp",
 			Handler:    _CategoryService_GetCategoriesByTimestamp_Handler,
+		},
+		{
+			MethodName: "GetMaxTimestamp",
+			Handler:    _CategoryService_GetMaxTimestamp_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
