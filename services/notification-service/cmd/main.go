@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"soa-video-streaming/pkg/httpsrv"
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/notification-service/internal/config"
 	"soa-video-streaming/services/notification-service/internal/service"
@@ -15,7 +14,6 @@ func main() {
 
 	fx.New(
 		config.Module(),
-		httpsrv.Module(),
 		rabbitmq.Module(),
 		service.Module(),
 	).Run()
