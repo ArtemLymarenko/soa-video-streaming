@@ -1,7 +1,7 @@
 http:
-  addr: localhost:8082
+  addr: localhost:8081
 grpc:
-  addr: localhost:8082
+  addr: localhost:9002
 rabbitmq:
   url: "amqp://admin:admin@localhost:5672/"
   reconnect_attempts: 2
@@ -15,4 +15,4 @@ postgres:
   health_check_int: 1m
 grpc_client:
   users:
-    target: "grpc://localhost:8081"
+    target: "localhost:9001"

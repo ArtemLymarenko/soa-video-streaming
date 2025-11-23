@@ -25,7 +25,7 @@ func (r *MediaContentRepository) Create(ctx context.Context, m entity.MediaConte
 	defer tx.Rollback(ctx)
 
 	const insertMedia = `
-		INSERT INTO media_content (
+		INSERT INTO media_content.media_content (
 			id, name, description, type, duration, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
@@ -50,7 +50,7 @@ func (r *MediaContentRepository) Create(ctx context.Context, m entity.MediaConte
 		}
 
 		const insertCategories = `
-			INSERT INTO media_content_categories (media_content_id, category_id)
+			INSERT INTO media_content.media_content_categories (media_content_id, category_id)
 			SELECT $1, unnest($2::text[])
 		`
 
@@ -66,7 +66,7 @@ func (r *MediaContentRepository) Create(ctx context.Context, m entity.MediaConte
 func (r *MediaContentRepository) GetByID(ctx context.Context, id string) (*entity.MediaContent, error) {
 	qMedia := `
 		SELECT id, name, description, type, duration, created_at, updated_at
-		FROM media_content
+		FROM media_content.media_content
 		WHERE id = $1
 	`
 
@@ -90,8 +90,8 @@ func (r *MediaContentRepository) GetByID(ctx context.Context, id string) (*entit
 
 	qCategories := `
 		SELECT c.id, c.name, c.description
-		FROM categories c
-		JOIN media_content_categories mcc ON c.id = mcc.category_id
+		FROM media_content.categories c
+		JOIN media_content.media_content_categories mcc ON c.id = mcc.category_id
 		WHERE mcc.media_content_id = $1
 	`
 
@@ -118,7 +118,7 @@ func (r *MediaContentRepository) GetByID(ctx context.Context, id string) (*entit
 }
 
 func (r *MediaContentRepository) Delete(ctx context.Context, id string) error {
-	q := `DELETE FROM media_content WHERE id = $1`
+	q := `DELETE FROM media_content.media_content WHERE id = $1`
 	_, err := r.db.Exec(ctx, q, id)
 	return err
 }
@@ -134,8 +134,8 @@ func (r *MediaContentRepository) GetRandomByCategories(
 
 	q := `
 		SELECT DISTINCT mc.id, mc.name, mc.description, mc.type, mc.duration, mc.created_at, mc.updated_at
-		FROM media_content mc
-		JOIN media_content_categories mcc ON mc.id = mcc.media_content_id
+		FROM media_content.media_content mc
+		JOIN media_content.media_content_categories mcc ON mc.id = mcc.media_content_id
 		WHERE mcc.category_id = ANY($1)
 		ORDER BY RANDOM()
 		LIMIT $2
