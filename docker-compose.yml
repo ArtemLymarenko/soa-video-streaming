@@ -41,6 +41,32 @@ services:
     networks:
       - soa-network
 
+  user-migration:
+    image: migrate/migrate
+    container_name: soa_video_user_migration
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: [ "migrate", "-path", "/migrations", "-database", "postgres://postgres:password@db:5432/postgres?sslmode=disable", "up" ]
+    volumes:
+      - ./db/user-service:/migrations
+    networks:
+      - soa-network
+    restart: on-failure
+
+  content-migration:
+    image: migrate/migrate
+    container_name: soa_video_content_migration
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: [ "migrate", "-path", "/migrations", "-database", "postgres://postgres:password@db:5432/postgres?sslmode=disable", "up" ]
+    volumes:
+      - ./db/media-content:/migrations
+    networks:
+      - soa-network
+    restart: on-failure
+
   user-service:
     build:
       context: .
@@ -57,6 +83,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      user-migration:
+        condition: service_completed_successfully
     networks:
       - soa-network
 
@@ -78,6 +106,8 @@ services:
         condition: service_healthy
       user-service:
         condition: service_started
+      content-migration:
+        condition: service_completed_successfully
     networks:
       - soa-network
 
@@ -104,8 +134,9 @@ services:
     restart: always
     ports:
       - "8080:8080"
-    # volumes:
-    #   - ./krakend.json:/etc/krakend/krakend.json
+    volumes:
+      - ./services/api-gateway/krakend.json:/etc/krakend/krakend.json
+      - ./services/api-gateway/jwk.json:/etc/krakend/jwk.json
     depends_on:
       - user-service
       - content-service
