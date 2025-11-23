@@ -1,0 +1,18 @@
+http:
+  addr: 0.0.0.0:8081
+grpc:
+  addr: 0.0.0.0:9002
+rabbitmq:
+  url: "amqp://admin:admin@rabbitmq:5672/"
+  reconnect_attempts: 5
+  reconnect_delay: 30s
+  prefetch_count: 0
+postgres:
+  dsn: "postgres://postgres:password@db:5432/postgres?sslmode=disable"
+  min_conns: 2
+  max_conns: 10
+  conn_max_idle: 5m
+  health_check_int: 1m
+grpc_client:
+  users:
+    target: "user-service:9001"

@@ -1,0 +1,5 @@
+rabbitmq:
+  url: "amqp://admin:admin@rabbitmq:5672/"
+  reconnect_attempts: 5
+  reconnect_delay: 30s
+  prefetch_count: 0

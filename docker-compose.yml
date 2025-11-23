@@ -1,0 +1,120 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    container_name: soa_video_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    # Uncomment for local development access
+    # ports:
+    #   - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - soa-network
+
+  rabbitmq:
+    image: masstransit/rabbitmq
+    container_name: soa_video_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    # Uncomment for local development access
+    # ports:
+    #   - "5672:5672"
+    #   - "15672:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - soa-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    container_name: soa_video_user_service
+    restart: always
+    command: [ "/app/user-service", "--configPath=/etc/user-service", "--configName=production" ]
+    volumes:
+      - type: bind
+        source: ./services/user-service/release/config/production.yml
+        target: /etc/user-service/production.yml
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - soa-network
+
+  content-service:
+    build:
+      context: .
+      dockerfile: services/content-service/Dockerfile
+    container_name: soa_video_content_service
+    restart: always
+    command: [ "/app/content-service", "--configPath=/etc/content-service", "--configName=production" ]
+    volumes:
+      - type: bind
+        source: ./services/content-service/release/config/production.yml
+        target: /etc/content-service/production.yml
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - soa-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: soa_video_notification_service
+    restart: always
+    command: [ "/app/notification-service", "--configPath=/etc/notification-service", "--configName=production" ]
+    volumes:
+      - type: bind
+        source: ./services/notification-service/release/config/production.yml
+        target: /etc/notification-service/production.yml
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - soa-network
+
+  api-gateway:
+    image: devopsfaith/krakend:2.5
+    container_name: soa_video_api_gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    # volumes:
+    #   - ./krakend.json:/etc/krakend/krakend.json
+    depends_on:
+      - user-service
+      - content-service
+    networks:
+      - soa-network
+
+networks:
+  soa-network:
+    driver: bridge
+
+volumes:
+  pgdata:
