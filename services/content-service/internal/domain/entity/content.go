@@ -10,12 +10,12 @@ const (
 )
 
 type MediaContent struct {
-	ID          string
-	Name        string
-	Description string
-	Type        MediaContentType
-	Duration    int
-	Categories  []Category
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Type        MediaContentType `json:"type"`
+	Duration    int              `json:"duration"`
+	Categories  []Category       `json:"categories"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
 }

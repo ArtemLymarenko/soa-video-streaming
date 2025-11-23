@@ -3,7 +3,6 @@ package dto
 import "soa-video-streaming/services/content-service/internal/domain/entity"
 
 type CreateMediaContentRequest struct {
-	ID          string   `json:"id" binding:"required"`
 	Name        string   `json:"name" binding:"required"`
 	Description string   `json:"description"`
 	Type        string   `json:"type" binding:"required,oneof=movie series"`

@@ -55,8 +55,7 @@ func (r *CategoryRepository) Delete(ctx context.Context, id entity.CategoryID) e
 }
 
 func (r *CategoryRepository) GetByTimestamp(ctx context.Context, from, to int64) ([]entity.Category, error) {
-	q := `SELECT id, name, description FROM media_content.categories WHERE updated_at >= to_timestamp($1) AND updated_at <= to_timestamp($2)
-    `
+	q := `SELECT id, name, description FROM media_content.categories WHERE updated_at >= to_timestamp($1) AND updated_at <= to_timestamp($2)`
 
 	rows, err := r.db.Query(ctx, q, from, to)
 	if err != nil {

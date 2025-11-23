@@ -12,8 +12,9 @@ type Recommendations struct {
 	userGRPCClient userv1.UserServiceClient
 }
 
-func NewRecommendations(userGRPCClient userv1.UserServiceClient) *Recommendations {
+func NewRecommendations(repo *postgres.MediaContentRepository, userGRPCClient userv1.UserServiceClient) *Recommendations {
 	return &Recommendations{
+		repo:           repo,
 		userGRPCClient: userGRPCClient,
 	}
 }
@@ -24,11 +25,11 @@ func (s *Recommendations) GetRecommendations(ctx context.Context, userID string,
 		return nil, err
 	}
 
-	if len(resp.CategoryIds) == 0 {
+	if len(resp.GetCategoryIds()) == 0 {
 		return nil, nil
 	}
 
-	mediaList, err := s.repo.GetRandomByCategories(ctx, resp.CategoryIds, limit)
+	mediaList, err := s.repo.GetRandomByCategories(ctx, resp.GetCategoryIds(), limit)
 	if err != nil {
 		return nil, err
 	}

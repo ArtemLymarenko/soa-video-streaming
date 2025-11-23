@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"github.com/google/uuid"
 	"net/http"
 	"soa-video-streaming/services/content-service/internal/controller/rest/dto"
 	"soa-video-streaming/services/content-service/internal/domain/entity"
@@ -36,8 +37,9 @@ func (c *MediaContentController) Create(ctx *gin.Context) {
 		categories[i] = entity.Category{ID: entity.CategoryID(catID)}
 	}
 
+	id := uuid.NewString()
 	media := entity.MediaContent{
-		ID:          req.ID,
+		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,
 		Type:        entity.MediaContentType(req.Type),
@@ -52,7 +54,7 @@ func (c *MediaContentController) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusCreated)
+	ctx.JSON(http.StatusCreated, gin.H{"id": id})
 }
 
 func (c *MediaContentController) GetByID(ctx *gin.Context) {

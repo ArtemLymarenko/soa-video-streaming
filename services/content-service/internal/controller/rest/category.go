@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"github.com/google/uuid"
 	"net/http"
 	"soa-video-streaming/services/content-service/internal/controller/rest/dto"
 	"soa-video-streaming/services/content-service/internal/domain/entity"
@@ -32,8 +33,10 @@ func (c *CategoryController) Create(ctx *gin.Context) {
 		return
 	}
 
+	id := entity.CategoryID(uuid.NewString())
+
 	category := entity.Category{
-		ID:          entity.CategoryID(req.ID),
+		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,
 	}
@@ -43,7 +46,7 @@ func (c *CategoryController) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusCreated)
+	ctx.JSON(http.StatusCreated, category)
 }
 
 func (c *CategoryController) GetByID(ctx *gin.Context) {
@@ -90,7 +93,7 @@ func (c *CategoryController) Delete(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	ctx.Status(http.StatusOK)
 }
 
 func (c *CategoryController) GetByTimestamp(ctx *gin.Context) {

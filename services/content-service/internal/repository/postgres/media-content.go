@@ -133,10 +133,11 @@ func (r *MediaContentRepository) GetRandomByCategories(
 	}
 
 	q := `
-		SELECT DISTINCT mc.id, mc.name, mc.description, mc.type, mc.duration, mc.created_at, mc.updated_at
+		SELECT mc.id, mc.name, mc.description, mc.type, mc.duration, mc.created_at, mc.updated_at
 		FROM media_content.media_content mc
 		JOIN media_content.media_content_categories mcc ON mc.id = mcc.media_content_id
 		WHERE mcc.category_id = ANY($1)
+		GROUP BY mc.id
 		ORDER BY RANDOM()
 		LIMIT $2
 	`
