@@ -47,21 +47,21 @@ CREATE INDEX IF NOT EXISTS idx_media_content_categories_category_id
 -- Create trigger function to update updated_at timestamp
 -- Note: PostgreSQL doesn't support ON UPDATE CURRENT_TIMESTAMP like MySQL
 -- We need to use triggers for automatic timestamp updates
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION media_content.update_updated_at_column()
+    RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers for automatic updated_at updates
-CREATE TRIGGER update_categories_updated_at
+-- Create triggers using the scoped function
+CREATE OR REPLACE TRIGGER update_categories_updated_at
     BEFORE UPDATE ON media_content.categories
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+EXECUTE FUNCTION media_content.update_updated_at_column();
 
-CREATE TRIGGER update_media_content_updated_at
+CREATE OR REPLACE TRIGGER update_media_content_updated_at
     BEFORE UPDATE ON media_content.media_content
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+EXECUTE FUNCTION media_content.update_updated_at_column();

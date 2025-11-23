@@ -9,9 +9,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: postgres
-    # Uncomment for local development access
-    # ports:
-    #   - "5432:5432"
+    ports:
+       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -29,10 +28,9 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin
-    # Uncomment for local development access
-    # ports:
-    #   - "5672:5672"
-    #   - "15672:15672"
+    ports:
+       - "5672:5672"
+       - "15672:15672"
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
@@ -47,7 +45,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    entrypoint: [ "migrate", "-path", "/migrations", "-database", "postgres://postgres:password@db:5432/postgres?sslmode=disable", "up" ]
+    entrypoint: [ "migrate", "-path", "/migrations", "-database", "postgres://postgres:password@db:5432/postgres?sslmode=disable&x-migrations-table=schema_migrations_users", "up" ]
     volumes:
       - ./db/user-service:/migrations
     networks:
@@ -60,7 +58,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    entrypoint: [ "migrate", "-path", "/migrations", "-database", "postgres://postgres:password@db:5432/postgres?sslmode=disable", "up" ]
+      user-migration:
+        condition: service_completed_successfully
+    entrypoint: [ "migrate", "-path", "/migrations", "-database", "postgres://postgres:password@db:5432/postgres?sslmode=disable&x-migrations-table=schema_migrations_content", "up" ]
     volumes:
       - ./db/media-content:/migrations
     networks:
