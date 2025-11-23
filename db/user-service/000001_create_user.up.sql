@@ -1,3 +1,5 @@
+CREATE SCHEMA IF NOT EXISTS user_service;
+
 -- Create users table
 CREATE TABLE IF NOT EXISTS user_service.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,3 +1,5 @@
+CREATE SCHEMA IF NOT EXISTS media_content;
+
 -- Create categories table
 CREATE TABLE IF NOT EXISTS media_content.categories (
     id TEXT PRIMARY KEY,
