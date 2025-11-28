@@ -25,7 +25,7 @@ func (r *UserInfoRepository) Save(ctx context.Context, userId string, userInfo e
 	return err
 }
 
-func (r *UserInfoRepository) WithTX(tx pgx.Tx) *UserInfoRepository {
+func (r *UserInfoRepository) WithTx(tx pgx.Tx) *UserInfoRepository {
 	return &UserInfoRepository{
 		db: tx,
 	}

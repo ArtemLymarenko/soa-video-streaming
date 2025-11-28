@@ -79,7 +79,7 @@ func (c *Client) connectWithRetry(ctx context.Context) error {
 	return fmt.Errorf("rabbitmq: failed to connect after %d attempts: %w", c.cfg.ReconnectAttempts, lastErr)
 }
 
-func (c *Client) newChannel() (*amqp.Channel, error) {
+func (c *Client) NewChannel() (*amqp.Channel, error) {
 	if c.conn == nil {
 		return nil, fmt.Errorf("rabbitmq: connection is nil")
 	}
@@ -108,7 +108,7 @@ type QueueOptions struct {
 }
 
 func (c *Client) DeclareQueue(name string, opts QueueOptions) (amqp.Queue, *amqp.Channel, error) {
-	ch, err := c.newChannel()
+	ch, err := c.NewChannel()
 	if err != nil {
 		return amqp.Queue{}, nil, err
 	}
@@ -147,7 +147,7 @@ func (c *Client) NewPublisher(lc fx.Lifecycle, exchange, routingKey string) (*Pu
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			<-c.done
-			ch, err := c.newChannel()
+			ch, err := c.NewChannel()
 			if err == nil {
 				p.ch = ch
 				logrus.Infof("Publisher initialized (exchange: %s)", exchange)
@@ -206,7 +206,7 @@ func (c *Client) ConsumeQueue(
 	opts ConsumeOptions,
 	handler ConsumerHandler,
 ) error {
-	ch, err := c.newChannel()
+	ch, err := c.NewChannel()
 	if err != nil {
 		return err
 	}

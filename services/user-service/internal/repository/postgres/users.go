@@ -24,6 +24,13 @@ func NewUsersRepository(db postgres.DB, client *postgres.Client, userInfoRepo *U
 	}
 }
 
+func (r *UsersRepository) WithTx(tx pgx.Tx) *UsersRepository {
+	return &UsersRepository{
+		db:     tx,
+		client: r.client,
+	}
+}
+
 func (r *UsersRepository) findOne(ctx context.Context, query string, args ...interface{}) (entity.User, error) {
 	row := r.db.QueryRow(ctx, query, args...)
 
@@ -68,17 +75,12 @@ func (r *UsersRepository) FindByEmail(ctx context.Context, email string) (entity
 }
 
 func (r *UsersRepository) Save(ctx context.Context, user entity.User) error {
-	err := r.client.Tx(ctx, func(tx pgx.Tx) error {
-		q := `INSERT INTO user_service.users(id, email, password) VALUES ($1, $2, $3)`
+	q := `INSERT INTO user_service.users(id, email, password) VALUES ($1, $2, $3)`
 
-		_, err := tx.Exec(ctx, q, user.Id, user.Email, user.Password)
-		if err != nil {
-			return err
-		}
-
-		err = r.userInfoRepo.WithTX(tx).Save(ctx, user.Id, user.UserInfo)
+	_, err := r.db.Exec(ctx, q, user.Id, user.Email, user.Password)
+	if err != nil {
 		return err
-	})
+	}
 
-	return err
+	return nil
 }

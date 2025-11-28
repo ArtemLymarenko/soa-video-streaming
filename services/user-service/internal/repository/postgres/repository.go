@@ -10,6 +10,8 @@ func Module() fx.Option {
 			NewUsersRepository,
 			NewUserInfoRepository,
 			NewUserPreference,
+			NewOutboxRepository,
+			NewTransactionManager,
 		),
 	)
 }
