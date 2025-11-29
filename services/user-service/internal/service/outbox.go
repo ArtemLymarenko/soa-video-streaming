@@ -4,43 +4,41 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/oagudo/outbox"
+	"github.com/sirupsen/logrus"
+	gorabbit "github.com/wagslane/go-rabbitmq"
+	"go.uber.org/fx"
 	"log"
 	"soa-video-streaming/pkg/postgres"
 	"soa-video-streaming/pkg/rabbitmq"
 	"time"
-
-	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/oagudo/outbox"
-	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/fx"
 )
 
 type OutboxPublisher struct {
-	client *rabbitmq.Client
+	publisher *gorabbit.Publisher
 }
 
-func NewOutboxPublisher(client *rabbitmq.Client) (*OutboxPublisher, error) {
+func NewOutboxPublisher(conn *rabbitmq.Client) (*OutboxPublisher, error) {
+	publisher, err := conn.NewPublisher()
+	if err != nil {
+		return nil, err
+	}
+
 	return &OutboxPublisher{
-		client: client,
+		publisher: publisher,
 	}, nil
 }
 
 func (p *OutboxPublisher) Publish(ctx context.Context, msg *outbox.Message) error {
 	queueName := string(msg.Metadata)
 	if queueName == "" {
-		return fmt.Errorf("outbox publisher: queue name (metadata) is empty")
+		return fmt.Errorf("outbox publisher: queue name metadata is empty")
 	}
 
-	return p.client.Publish(ctx, rabbitmq.PublishParams{
-		Exchange:   "",
-		RoutingKey: queueName,
-		Mandatory:  false,
-		Immediate:  false,
-	}, amqp.Publishing{
-		ContentType: "application/json",
-		Body:        msg.Payload,
-	})
+	return p.publisher.PublishWithContext(ctx, msg.Payload, []string{queueName},
+		gorabbit.WithPublishOptionsContentType("application/json"),
+	)
 }
 
 func RunOutboxReader(lc fx.Lifecycle, pool *postgres.Client, publisher *OutboxPublisher) {
