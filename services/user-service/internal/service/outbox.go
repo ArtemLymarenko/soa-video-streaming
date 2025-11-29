@@ -16,17 +16,12 @@ import (
 )
 
 type OutboxPublisher struct {
-	publisher *gorabbit.Publisher
+	publisher *rabbitmq.Publisher
 }
 
 func NewOutboxPublisher(conn *rabbitmq.Client) (*OutboxPublisher, error) {
-	publisher, err := conn.NewPublisher()
-	if err != nil {
-		return nil, err
-	}
-
 	return &OutboxPublisher{
-		publisher: publisher,
+		publisher: conn.NewPublisher(),
 	}, nil
 }
 

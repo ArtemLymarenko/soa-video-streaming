@@ -41,19 +41,38 @@ func NewClient(cfg *Config) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) NewPublisher() (*rabbitmq.Publisher, error) {
-	return rabbitmq.NewPublisher(
-		c.Conn,
-		rabbitmq.WithPublisherOptionsLogging,
-	)
+type Publisher struct {
+	*rabbitmq.Publisher
 }
 
-func (c *Client) NewConsumer(queue string) (*rabbitmq.Consumer, error) {
-	return rabbitmq.NewConsumer(
+func (c *Client) NewPublisher() *Publisher {
+	publisher, err := rabbitmq.NewPublisher(c.Conn, rabbitmq.WithPublisherOptionsLogging)
+	if err != nil {
+		panic(err)
+	}
+
+	return &Publisher{
+		Publisher: publisher,
+	}
+}
+
+type Consumer struct {
+	*rabbitmq.Consumer
+}
+
+func (c *Client) NewConsumer(queue string) *Consumer {
+	consumer, err := rabbitmq.NewConsumer(
 		c.Conn,
 		queue,
 		rabbitmq.WithConsumerOptionsQOSPrefetch(c.cfg.PrefetchCount),
 		rabbitmq.WithConsumerOptionsLogging,
 		rabbitmq.WithConsumerOptionsQueueDurable,
 	)
+	if err != nil {
+		panic(err)
+	}
+
+	return &Consumer{
+		Consumer: consumer,
+	}
 }
