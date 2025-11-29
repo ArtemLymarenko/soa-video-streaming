@@ -21,7 +21,7 @@ func (r *UserPreference) AddPreferredCategories(ctx context.Context, userID stri
 		return errors.New("category list is empty")
 	}
 
-	q := `INSERT INTO user_service.user_preferred_categories (user_id, category_id)
+	q := `INSERT INTO user_preferred_categories (user_id, category_id)
         SELECT $1, unnest($2::uuid[])
         ON CONFLICT DO NOTHING
 	`
@@ -31,7 +31,7 @@ func (r *UserPreference) AddPreferredCategories(ctx context.Context, userID stri
 }
 
 func (r *UserPreference) GetUserPreferredCategories(ctx context.Context, userID string) ([]string, error) {
-	q := `SELECT category_id FROM user_service.user_preferred_categories WHERE user_id = $1`
+	q := `SELECT category_id FROM user_preferred_categories WHERE user_id = $1`
 
 	rows, err := r.db.Query(ctx, q, userID)
 	if err != nil {

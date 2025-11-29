@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"soa-video-streaming/pkg/postgres"
 	"soa-video-streaming/pkg/rabbitmq"
 	"time"
@@ -17,56 +18,29 @@ import (
 
 type OutboxPublisher struct {
 	client *rabbitmq.Client
-	ch     *amqp.Channel
 }
 
-func NewOutboxPublisher(lc fx.Lifecycle, client *rabbitmq.Client) (*OutboxPublisher, error) {
-	p := &OutboxPublisher{
+func NewOutboxPublisher(client *rabbitmq.Client) (*OutboxPublisher, error) {
+	return &OutboxPublisher{
 		client: client,
-	}
-
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			ch, err := client.NewChannel()
-			if err != nil {
-				return err
-			}
-
-			p.ch = ch
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			if p.ch != nil {
-				return p.ch.Close()
-			}
-			return nil
-		},
-	})
-
-	return p, nil
+	}, nil
 }
 
 func (p *OutboxPublisher) Publish(ctx context.Context, msg *outbox.Message) error {
-	if p.ch == nil {
-		return fmt.Errorf("outbox publisher: channel is nil")
-	}
-
 	queueName := string(msg.Metadata)
 	if queueName == "" {
 		return fmt.Errorf("outbox publisher: queue name (metadata) is empty")
 	}
 
-	return p.ch.PublishWithContext(
-		ctx,
-		"",        // exchange
-		queueName, // routing key
-		false,     // mandatory
-		false,     // immediate
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        msg.Payload,
-		},
-	)
+	return p.client.Publish(ctx, rabbitmq.PublishParams{
+		Exchange:   "",
+		RoutingKey: queueName,
+		Mandatory:  false,
+		Immediate:  false,
+	}, amqp.Publishing{
+		ContentType: "application/json",
+		Body:        msg.Payload,
+	})
 }
 
 func RunOutboxReader(lc fx.Lifecycle, pool *postgres.Client, publisher *OutboxPublisher) {
@@ -82,11 +56,39 @@ func RunOutboxReader(lc fx.Lifecycle, pool *postgres.Client, publisher *OutboxPu
 			reader = outbox.NewReader(
 				dbCtx,
 				publisher,
-				outbox.WithInterval(1*time.Second),
+				outbox.WithInterval(15*time.Second),
 				outbox.WithReadBatchSize(10),
 			)
 
 			reader.Start()
+
+			go func() {
+				for err := range reader.Errors() {
+					switch e := err.(type) {
+					case *outbox.PublishError:
+						logrus.Printf("Failed to publish message | ID: %s | Error: %v",
+							e.Message.ID, e.Err)
+
+					case *outbox.UpdateError:
+						logrus.Printf("Failed to update message | ID: %s | Error: %v",
+							e.Message.ID, e.Err)
+
+					case *outbox.DeleteError:
+						logrus.Printf("Batch message deletion failed | Count: %d | Error: %v",
+							len(e.Messages), e.Err)
+						for _, msg := range e.Messages {
+							log.Printf("Failed to delete message | ID: %s", msg.ID)
+						}
+
+					case *outbox.ReadError:
+						logrus.Printf("Failed to read outbox messages | Error: %v", e.Err)
+
+					default:
+						logrus.Printf("Unexpected error occurred | Error: %v", e)
+					}
+				}
+			}()
+
 			logrus.Info("Outbox reader started")
 			return nil
 		},

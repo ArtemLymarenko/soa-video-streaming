@@ -67,12 +67,12 @@ func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult,
 	user.Password = string(hashed)
 
 	err = a.tm.RunInTransaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		if err := a.usersRepo.WithTx(tx).Save(ctx, user); err != nil {
-			return err
+		if txErr := a.usersRepo.WithTx(tx).Save(ctx, user); txErr != nil {
+			return txErr
 		}
 
-		if err := a.userInfoRepo.WithTx(tx).Save(ctx, user.Id, user.UserInfo); err != nil {
-			return err
+		if txErr := a.userInfoRepo.WithTx(tx).Save(ctx, user.Id, user.UserInfo); txErr != nil {
+			return txErr
 		}
 
 		event := notifications.EventSignUp{

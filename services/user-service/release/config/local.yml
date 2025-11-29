@@ -11,7 +11,7 @@ rabbitmq:
   reconnect_delay: 30s
   prefetch_count: 0
 postgres:
-  dsn: "postgres://postgres:password@localhost:5432/postgres?sslmode=disable"
+  dsn: "postgres://postgres:password@localhost:5432/postgres?sslmode=disable&search_path=user_service"
   min_conns: 0
   max_conns: 5
   conn_max_idle: 1m

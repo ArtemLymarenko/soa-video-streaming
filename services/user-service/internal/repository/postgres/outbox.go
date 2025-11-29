@@ -25,7 +25,7 @@ func (r *OutboxRepository) WithTx(tx pgx.Tx) *OutboxRepository {
 }
 
 const insertOutboxQuery = `
-INSERT INTO user_service.outbox (id, created_at, scheduled_at, metadata, payload, times_attempted)
+INSERT INTO outbox (id, created_at, scheduled_at, metadata, payload, times_attempted)
 VALUES ($1, $2, $3, $4, $5, $6)
 `
 
