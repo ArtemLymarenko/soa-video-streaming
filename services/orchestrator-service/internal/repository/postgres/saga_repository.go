@@ -8,10 +8,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/fx"
 
 	"soa-video-streaming/pkg/saga"
-	"soa-video-streaming/services/orchestrator-service/internal/domain/entity"
 )
+
+func Module() fx.Option {
+	return fx.Options(
+		fx.Provide(
+			NewSagaRepository,
+		),
+	)
+}
 
 type SagaRepository struct {
 	pool *pgxpool.Pool
@@ -21,20 +29,19 @@ func NewSagaRepository(pool *pgxpool.Pool) *SagaRepository {
 	return &SagaRepository{pool: pool}
 }
 
-// Create creates a new saga state
-func (r *SagaRepository) Create(ctx context.Context, correlationID string, state saga.SagaState, data map[string]interface{}) (*entity.SagaState, error) {
-	sagaState := &entity.SagaState{
+func (r *SagaRepository) Create(ctx context.Context, correlationID string, status saga.SagaStateStatus, data json.RawMessage) (*saga.SagaStateEntity, error) {
+	sagaState := &saga.SagaStateEntity{
 		ID:            uuid.NewString(),
 		CorrelationID: correlationID,
-		State:         state,
+		Status:        status,
 		Data:          data,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
 
-	dataJSON, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
+	var dataJSON []byte
+	if data != nil {
+		dataJSON = data
 	}
 
 	query := `
@@ -42,10 +49,11 @@ func (r *SagaRepository) Create(ctx context.Context, correlationID string, state
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
+	var err error
 	_, err = r.pool.Exec(ctx, query,
 		sagaState.ID,
 		sagaState.CorrelationID,
-		sagaState.State,
+		sagaState.Status,
 		dataJSON,
 		sagaState.CreatedAt,
 		sagaState.UpdatedAt,
@@ -58,11 +66,10 @@ func (r *SagaRepository) Create(ctx context.Context, correlationID string, state
 	return sagaState, nil
 }
 
-// Update updates the saga state
-func (r *SagaRepository) Update(ctx context.Context, correlationID string, state saga.SagaState, data map[string]interface{}) error {
-	dataJSON, err := json.Marshal(data)
-	if err != nil {
-		return err
+func (r *SagaRepository) Update(ctx context.Context, correlationID string, status saga.SagaStateStatus, data json.RawMessage) error {
+	var dataJSON []byte
+	if data != nil {
+		dataJSON = data
 	}
 
 	query := `
@@ -71,11 +78,10 @@ func (r *SagaRepository) Update(ctx context.Context, correlationID string, state
 		WHERE correlation_id = $4
 	`
 
-	_, err = r.pool.Exec(ctx, query, state, dataJSON, time.Now(), correlationID)
+	_, err := r.pool.Exec(ctx, query, status, dataJSON, time.Now(), correlationID)
 	return err
 }
 
-// Complete marks the saga as completed
 func (r *SagaRepository) Complete(ctx context.Context, correlationID string) error {
 	query := `
 		UPDATE orchestrator_service.saga_state
@@ -87,22 +93,21 @@ func (r *SagaRepository) Complete(ctx context.Context, correlationID string) err
 	return err
 }
 
-// FindByCorrelationID finds a saga by correlation ID
-func (r *SagaRepository) FindByCorrelationID(ctx context.Context, correlationID string) (*entity.SagaState, error) {
+func (r *SagaRepository) FindByCorrelationID(ctx context.Context, correlationID string) (*saga.SagaStateEntity, error) {
 	query := `
 		SELECT id, correlation_id, state, data, created_at, updated_at, completed_at
 		FROM orchestrator_service.saga_state
 		WHERE correlation_id = $1
 	`
 
-	var sagaState entity.SagaState
+	var sagaState saga.SagaStateEntity
 	var dataJSON []byte
 	var completedAt *time.Time
 
 	err := r.pool.QueryRow(ctx, query, correlationID).Scan(
 		&sagaState.ID,
 		&sagaState.CorrelationID,
-		&sagaState.State,
+		&sagaState.Status,
 		&dataJSON,
 		&sagaState.CreatedAt,
 		&sagaState.UpdatedAt,
@@ -128,7 +133,6 @@ func (r *SagaRepository) FindByCorrelationID(ctx context.Context, correlationID 
 	return &sagaState, nil
 }
 
-// AddStep adds a step to the saga
 func (r *SagaRepository) AddStep(ctx context.Context, sagaStateID, stepName, serviceName string, status saga.StepStatus) error {
 	query := `
 		INSERT INTO orchestrator_service.saga_steps (id, saga_state_id, step_name, service_name, status, created_at)
@@ -147,7 +151,6 @@ func (r *SagaRepository) AddStep(ctx context.Context, sagaStateID, stepName, ser
 	return err
 }
 
-// UpdateStep updates a saga step
 func (r *SagaRepository) UpdateStep(ctx context.Context, sagaStateID, stepName string, status saga.StepStatus, errorMessage string) error {
 	now := time.Now()
 
@@ -161,8 +164,7 @@ func (r *SagaRepository) UpdateStep(ctx context.Context, sagaStateID, stepName s
 	return err
 }
 
-// GetSteps retrieves all steps for a saga
-func (r *SagaRepository) GetSteps(ctx context.Context, sagaStateID string) ([]entity.SagaStep, error) {
+func (r *SagaRepository) GetSteps(ctx context.Context, sagaStateID string) ([]saga.SagaStep, error) {
 	query := `
 		SELECT id, saga_state_id, step_name, service_name, status, executed_at, compensated_at, error_message, created_at
 		FROM orchestrator_service.saga_steps
@@ -176,9 +178,9 @@ func (r *SagaRepository) GetSteps(ctx context.Context, sagaStateID string) ([]en
 	}
 	defer rows.Close()
 
-	var steps []entity.SagaStep
+	var steps []saga.SagaStep
 	for rows.Next() {
-		var step entity.SagaStep
+		var step saga.SagaStep
 		err := rows.Scan(
 			&step.ID,
 			&step.SagaStateID,
@@ -193,6 +195,7 @@ func (r *SagaRepository) GetSteps(ctx context.Context, sagaStateID string) ([]en
 		if err != nil {
 			return nil, err
 		}
+
 		steps = append(steps, step)
 	}
 

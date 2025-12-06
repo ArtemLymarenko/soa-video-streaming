@@ -13,6 +13,7 @@ import (
 	"soa-video-streaming/pkg/saga"
 	"soa-video-streaming/services/content-service/internal/domain/entity"
 	"soa-video-streaming/services/content-service/internal/repository/postgres"
+	"soa-video-streaming/services/orchestrator-service/domain"
 )
 
 type BucketHandler struct {
@@ -41,10 +42,10 @@ func NewBucketHandler(
 	}, nil
 }
 
-func (h *BucketHandler) HandleCreateBucket(ctx context.Context, msg *saga.SagaMessage) error {
+func (h *BucketHandler) HandleCreateBucket(ctx context.Context, msg *saga.Message) error {
 	logrus.WithField("correlation_id", msg.CorrelationID).Info("Received CmdCreateBucket")
 
-	var payload saga.BucketPayload
+	var payload domain.BucketPayload
 	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 		return fmt.Errorf("unmarshal payload: %w", err)
 	}
@@ -79,10 +80,10 @@ func (h *BucketHandler) HandleCreateBucket(ctx context.Context, msg *saga.SagaMe
 	return h.publishBucketCreated(ctx, msg.CorrelationID, payload.UserID, bucketName)
 }
 
-func (h *BucketHandler) HandleCompensateBucket(ctx context.Context, msg *saga.SagaMessage) error {
+func (h *BucketHandler) HandleCompensateBucket(ctx context.Context, msg *saga.Message) error {
 	logrus.WithField("correlation_id", msg.CorrelationID).Info("Received CmdCompensateBucket")
 
-	var payload saga.BucketPayload
+	var payload domain.BucketPayload
 	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 		return fmt.Errorf("unmarshal payload: %w", err)
 	}
@@ -116,12 +117,12 @@ func (h *BucketHandler) HandleCompensateBucket(ctx context.Context, msg *saga.Sa
 	return nil
 }
 func (h *BucketHandler) publishBucketCreated(ctx context.Context, correlationID, userID, bucketName string) error {
-	payload := saga.BucketPayload{
+	payload := domain.BucketPayload{
 		UserID:     userID,
 		BucketName: bucketName,
 	}
 
-	msg, err := saga.NewSagaMessage(correlationID, saga.EventBucketCreated, payload)
+	msg, err := saga.NewSagaMessage(correlationID, domain.EventBucketCreated, payload)
 	if err != nil {
 		return fmt.Errorf("create saga message: %w", err)
 	}
@@ -136,18 +137,18 @@ func (h *BucketHandler) publishBucketCreated(ctx context.Context, correlationID,
 	return h.publisher.PublishWithContext(
 		ctx,
 		msgBytes,
-		[]string{saga.QueueBucketEvents},
+		[]string{domain.QueueBucketEvents},
 		gorabbit.WithPublishOptionsContentType("application/json"),
 	)
 }
 
 func (h *BucketHandler) publishBucketFailed(ctx context.Context, correlationID, userID, errorMsg string) error {
-	payload := saga.BucketPayload{
+	payload := domain.BucketPayload{
 		UserID: userID,
 		Error:  errorMsg,
 	}
 
-	msg, err := saga.NewSagaMessage(correlationID, saga.EventBucketFailed, payload)
+	msg, err := saga.NewSagaMessage(correlationID, domain.EventBucketFailed, payload)
 	if err != nil {
 		return fmt.Errorf("create saga message: %w", err)
 	}
@@ -165,7 +166,7 @@ func (h *BucketHandler) publishBucketFailed(ctx context.Context, correlationID, 
 	return h.publisher.PublishWithContext(
 		ctx,
 		msgBytes,
-		[]string{saga.QueueBucketEvents},
+		[]string{domain.QueueBucketEvents},
 		gorabbit.WithPublishOptionsContentType("application/json"),
 	)
 }

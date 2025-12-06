@@ -10,6 +10,7 @@ import (
 
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/pkg/saga"
+	"soa-video-streaming/services/orchestrator-service/domain"
 )
 
 func RunSagaConsumers(lc fx.Lifecycle, handler *BucketHandler, client *rabbitmq.Client) error {
@@ -20,7 +21,7 @@ func RunSagaConsumers(lc fx.Lifecycle, handler *BucketHandler, client *rabbitmq.
 			var err error
 			consumer, err = gorabbit.NewConsumer(
 				client.Conn,
-				saga.QueueContentCommands,
+				domain.QueueContentCommands,
 				gorabbit.WithConsumerOptionsLogger(logrus.StandardLogger()),
 				gorabbit.WithConsumerOptionsQueueDurable,
 			)
@@ -50,7 +51,7 @@ func RunSagaConsumers(lc fx.Lifecycle, handler *BucketHandler, client *rabbitmq.
 
 func handleContentCommands(handler *BucketHandler) func(d gorabbit.Delivery) gorabbit.Action {
 	return func(d gorabbit.Delivery) gorabbit.Action {
-		var msg saga.SagaMessage
+		var msg saga.Message
 		if err := json.Unmarshal(d.Body, &msg); err != nil {
 			logrus.WithError(err).Error("Failed to unmarshal saga message")
 			return gorabbit.NackDiscard
@@ -58,9 +59,9 @@ func handleContentCommands(handler *BucketHandler) func(d gorabbit.Delivery) gor
 
 		var err error
 		switch msg.Type {
-		case saga.CmdCreateBucket:
+		case domain.CmdCreateBucket:
 			err = handler.HandleCreateBucket(context.Background(), &msg)
-		case saga.CmdCompensateBucket:
+		case domain.CmdCompensateBucket:
 			err = handler.HandleCompensateBucket(context.Background(), &msg)
 		default:
 			logrus.WithField("type", msg.Type).Warn("Unexpected message type in Content commands queue")

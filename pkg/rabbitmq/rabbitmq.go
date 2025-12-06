@@ -2,10 +2,11 @@ package rabbitmq
 
 import (
 	"fmt"
+	"time"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/wagslane/go-rabbitmq"
 	"go.uber.org/fx"
-	"time"
 )
 
 func Module() fx.Option {
