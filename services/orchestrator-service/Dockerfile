@@ -1,25 +1,18 @@
-# Build stage
 FROM golang:1.25-alpine AS builder
 
-WORKDIR /build
+WORKDIR /usr/src/app
 
-# Copy go mod files
 COPY go.mod go.sum ./
-RUN go mod download
+RUN apk add --no-cache git && go mod download
 
-# Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o orchestrator-service ./services/orchestrator-service/cmd/orchestrator-service
+RUN CGO_ENABLED=0 GOOS=linux go build -o /usr/src/app/bin/orchestrator-service services/orchestrator-service/cmd/main.go
 
-# Runtime stage
 FROM alpine:latest
 
 WORKDIR /app
 
-# Copy binary from builder
-COPY --from=builder /build/orchestrator-service .
+COPY --from=builder /usr/src/app/bin/orchestrator-service .
 
-# Run the application
-ENTRYPOINT ["/app/orchestrator-service"]
+CMD ["./orchestrator-service"]

@@ -12,7 +12,6 @@ const (
 	CmdCreateBucket     = "saga.cmd.create_bucket"
 	CmdCompensateBucket = "saga.cmd.compensate_bucket"
 	CmdSendEmail        = "saga.cmd.send_email"
-	CmdActivateUser     = "saga.cmd.activate_user"
 	CmdCompensateUser   = "saga.cmd.compensate_user"
 )
 

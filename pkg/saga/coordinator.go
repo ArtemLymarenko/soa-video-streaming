@@ -19,7 +19,7 @@ func Module() fx.Option {
 
 type EventHandlerFunc func(ctx context.Context, event *Event) error
 
-type SagaRepository interface {
+type Repository interface {
 	Create(ctx context.Context, correlationID string, status SagaStateStatus, data json.RawMessage) (*SagaStateEntity, error)
 	Update(ctx context.Context, correlationID string, status SagaStateStatus, data json.RawMessage) error
 	Complete(ctx context.Context, correlationID string) error
@@ -32,25 +32,67 @@ type SagaRepository interface {
 type MessagePublisher interface {
 	PublishCommand(ctx context.Context, queue string, msg *Message) error
 }
+
+type CommandDestination struct {
+	Queue   string
+	Service string
+}
+
+type StepDefinition struct {
+	Name         string
+	Command      string
+	Queue        string
+	Service      string
+	SuccessEvent string
+	FailureEvent string
+	OnFailure    []string
+}
+
 type Coordinator struct {
-	repo            SagaRepository
+	repo            Repository
 	publisher       MessagePublisher
 	eventHandlers   map[string]EventHandlerFunc
 	failureHandlers map[string][]string
-	commandsQueues  map[string]string
+	commandDest     map[string]CommandDestination
+	eventToStep     map[string]string
 }
 
-func NewCoordinator(repo SagaRepository, publisher MessagePublisher) *Coordinator {
+func NewCoordinator(repo Repository, publisher MessagePublisher) *Coordinator {
 	return &Coordinator{
 		repo:            repo,
 		publisher:       publisher,
 		eventHandlers:   make(map[string]EventHandlerFunc),
 		failureHandlers: make(map[string][]string),
+		commandDest:     make(map[string]CommandDestination),
+		eventToStep:     make(map[string]string),
 	}
 }
 
-func (c *Coordinator) RegisterCommandQueue(queue map[string]string) *Coordinator {
-	c.commandsQueues = queue
+func (c *Coordinator) RegisterStep(step StepDefinition) *Coordinator {
+	c.commandDest[step.Command] = CommandDestination{
+		Queue:   step.Queue,
+		Service: step.Service,
+	}
+
+	if step.SuccessEvent != "" {
+		c.eventToStep[step.SuccessEvent] = step.Command
+	}
+	if step.FailureEvent != "" {
+		c.eventToStep[step.FailureEvent] = step.Command
+	}
+
+	if step.FailureEvent != "" && len(step.OnFailure) > 0 {
+		c.failureHandlers[step.FailureEvent] = step.OnFailure
+	}
+
+	return c
+}
+
+func (c *Coordinator) RegisterCompensationCommand(command, queue, service string) *Coordinator {
+	c.commandDest[command] = CommandDestination{
+		Queue:   queue,
+		Service: service,
+	}
 	return c
 }
 
@@ -78,8 +120,8 @@ func (c *Coordinator) HandleEvent(ctx context.Context, msg *Message) error {
 		return nil
 	}
 
-	if compensationCommands, isFailure := c.failureHandlers[msg.Type]; isFailure {
-		return c.executeCompensation(ctx, sagaState, compensationCommands)
+	if failHandler, ok := c.failureHandlers[msg.Type]; ok {
+		return c.executeCompensation(ctx, sagaState, failHandler)
 	}
 
 	handler, exists := c.eventHandlers[msg.Type]
@@ -94,11 +136,15 @@ func (c *Coordinator) HandleEvent(ctx context.Context, msg *Message) error {
 		sagaState:   sagaState,
 	}
 
-	if err := handler(ctx, event); err != nil {
+	if err = c.updateStepStatusFromEvent(ctx, sagaState, msg); err != nil {
+		logrus.WithError(err).Warn("Failed to update step status")
+	}
+
+	if err = handler(ctx, event); err != nil {
 		return fmt.Errorf("handler execution failed: %w", err)
 	}
 
-	if err := c.repo.Update(ctx, sagaState.CorrelationID, SagaStateCompleted, sagaState.Data); err != nil {
+	if err = c.repo.Update(ctx, sagaState.CorrelationID, sagaState.Status, sagaState.Data); err != nil {
 		return fmt.Errorf("failed to update saga state: %w", err)
 	}
 
@@ -129,15 +175,13 @@ func (c *Coordinator) executeCompensation(ctx context.Context, sagaState *SagaSt
 	}
 
 	for _, cmd := range commands {
-		queue, ok := c.commandsQueues[cmd]
+		dest, ok := c.commandDest[cmd]
 		if !ok {
-			logrus.WithField("command", cmd).Warn("Command queue not found")
 			continue
 		}
 
-		if err := c.publishCommand(ctx, queue, sagaState.CorrelationID, cmd, sagaState.Data); err != nil {
-			logrus.WithError(err).WithField("command", cmd).Error("Failed to publish compensation command")
-			return err
+		if err := c.publishCommand(ctx, dest.Queue, sagaState.CorrelationID, cmd, sagaState.Data); err != nil {
+			return fmt.Errorf("compensation failed for command %s: %w", cmd, err)
 		}
 	}
 
@@ -154,7 +198,7 @@ func (c *Coordinator) publishCommand(ctx context.Context, queueName string, corr
 		return fmt.Errorf("failed to create saga message: %w", err)
 	}
 
-	if err := c.publisher.PublishCommand(ctx, queueName, msg); err != nil {
+	if err = c.publisher.PublishCommand(ctx, queueName, msg); err != nil {
 		return fmt.Errorf("failed to publish command: %w", err)
 	}
 
@@ -168,24 +212,40 @@ type Event struct {
 	sagaState   *SagaStateEntity
 }
 
-func (e *Event) SendCommand(cmdType, serviceName, queueName string, payload any) error {
-	if err := e.coordinator.publishCommand(e.ctx, queueName, e.message.CorrelationID, cmdType, payload); err != nil {
+func (e *Event) SendCommand(cmdType string, payload any) error {
+	dest, ok := e.coordinator.commandDest[cmdType]
+	if !ok {
+		return fmt.Errorf("command destination not found for: %s", cmdType)
+	}
+
+	if err := e.coordinator.publishCommand(e.ctx, dest.Queue, e.message.CorrelationID, cmdType, payload); err != nil {
 		return err
 	}
 
-	if err := e.coordinator.repo.AddStep(e.ctx, e.sagaState.ID, cmdType, serviceName, StepStatusPending); err != nil {
+	if err := e.coordinator.repo.AddStep(e.ctx, e.sagaState.ID, cmdType, dest.Service, StepStatusPending); err != nil {
 		logrus.WithError(err).Warn("Failed to add saga step")
 	}
 
 	return nil
 }
 
-func (e *Event) SetData(raw json.RawMessage) {
+func (e *Event) SetState(state any) error {
+	raw, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("marshal state: %w", err)
+	}
 	e.sagaState.Data = raw
+	return nil
 }
 
-func (e *Event) GetData() json.RawMessage {
-	return e.sagaState.Data
+func (e *Event) GetState(target any) error {
+	if len(e.sagaState.Data) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(e.sagaState.Data, target); err != nil {
+		return fmt.Errorf("unmarshal state: %w", err)
+	}
+	return nil
 }
 
 func (e *Event) UnmarshalPayload(target any) error {
@@ -207,4 +267,27 @@ func (e *Event) Complete() error {
 
 func (e *Event) CorrelationID() string {
 	return e.message.CorrelationID
+}
+
+func (c *Coordinator) updateStepStatusFromEvent(ctx context.Context, sagaState *SagaStateEntity, msg *Message) error {
+	stepName, ok := c.eventToStep[msg.Type]
+	if !ok {
+		return nil
+	}
+
+	status := StepStatusCompleted
+	errorMsg := ""
+
+	if _, ok := c.failureHandlers[msg.Type]; ok {
+		status = StepStatusFailed
+
+		var payload map[string]any
+		if err := json.Unmarshal(msg.Payload, &payload); err == nil {
+			if errVal, ok := payload["error"]; ok {
+				errorMsg = fmt.Sprintf("%v", errVal)
+			}
+		}
+	}
+
+	return c.repo.UpdateStep(ctx, sagaState.ID, stepName, status, errorMsg)
 }
