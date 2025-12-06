@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: postgres
     ports:
-       - "5432:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -29,8 +29,8 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin
     ports:
-       - "5672:5672"
-       - "15672:15672"
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
@@ -67,6 +67,21 @@ services:
       - soa-network
     restart: on-failure
 
+  orchestrator-migration:
+    image: migrate/migrate
+    container_name: soa_video_orchestrator_migration
+    depends_on:
+      db:
+        condition: service_healthy
+      content-migration:
+        condition: service_completed_successfully
+    entrypoint: [ "migrate", "-path", "/migrations", "-database", "postgres://postgres:password@db:5432/postgres?sslmode=disable&x-migrations-table=schema_migrations_orchestrator", "up" ]
+    volumes:
+      - ./db/orchestrator-service:/migrations
+    networks:
+      - soa-network
+    restart: on-failure
+
   user-service:
     build:
       context: .
@@ -84,6 +99,27 @@ services:
       rabbitmq:
         condition: service_healthy
       user-migration:
+        condition: service_completed_successfully
+    networks:
+      - soa-network
+
+  orchestrator-service:
+    build:
+      context: .
+      dockerfile: services/orchestrator-service/Dockerfile
+    container_name: soa_video_orchestrator_service
+    restart: always
+    command: [ "/app/orchestrator-service", "--configPath=/etc/orchestrator-service", "--configName=production" ]
+    volumes:
+      - type: bind
+        source: ./services/orchestrator-service/release/config/production.yml
+        target: /etc/orchestrator-service/production.yml
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      orchestrator-migration:
         condition: service_completed_successfully
     networks:
       - soa-network

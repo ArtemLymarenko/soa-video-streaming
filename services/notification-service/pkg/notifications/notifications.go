@@ -4,7 +4,9 @@ import (
 	"time"
 )
 
-const SignUpEventQueueName = "user.signup"
+const (
+	QueueSignUpEvent = "user.signup"
+)
 
 type EventSignUp struct {
 	UserID    string    `json:"user_id"`

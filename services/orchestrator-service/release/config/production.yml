@@ -1,0 +1,10 @@
+postgres:
+  dsn: "postgres://postgres:password@db:5432/postgres?sslmode=disable"
+  max_conns: 25
+  min_conns: 5
+  conn_max_idle: 1800s
+  health_check_int: 60s
+
+rabbitmq:
+  url: "amqp://admin:admin@rabbitmq:5672/"
+  reconnect_delay: 5s

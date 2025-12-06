@@ -5,6 +5,7 @@ import (
 	"soa-video-streaming/pkg/grpcsrv"
 	"soa-video-streaming/pkg/httpsrv"
 	"soa-video-streaming/pkg/postgres"
+	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/content-service/internal/config"
 	postgresRepos "soa-video-streaming/services/content-service/internal/repository/postgres"
 	"soa-video-streaming/services/content-service/internal/service"
@@ -21,6 +22,7 @@ func main() {
 		config.Module(),
 		httpsrv.Module(),
 		postgres.Module(),
+		rabbitmq.Module(),
 		postgresRepos.Module(),
 		grpcsrv.Module(),
 		grpcsrv.ClientModule(),

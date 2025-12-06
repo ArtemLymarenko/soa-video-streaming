@@ -8,6 +8,9 @@ func Module() fx.Option {
 			NewCategoryService,
 			NewMediaContentService,
 			NewRecommendations,
+			NewS3Mock,
+			NewBucketHandler,
 		),
+		fx.Invoke(RunSagaConsumers),
 	)
 }

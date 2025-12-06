@@ -16,12 +16,17 @@ import (
 )
 
 type OutboxPublisher struct {
-	publisher *rabbitmq.Publisher
+	publisher *gorabbit.Publisher
 }
 
-func NewOutboxPublisher(conn *rabbitmq.Client) (*OutboxPublisher, error) {
+func NewOutboxPublisher(client *rabbitmq.Client) (*OutboxPublisher, error) {
+	publisher, err := gorabbit.NewPublisher(client.Conn, gorabbit.WithPublisherOptionsLogger(logrus.StandardLogger()))
+	if err != nil {
+		return nil, err
+	}
+
 	return &OutboxPublisher{
-		publisher: conn.NewPublisher(),
+		publisher: publisher,
 	}, nil
 }
 
@@ -54,33 +59,7 @@ func RunOutboxReader(lc fx.Lifecycle, pool *postgres.Client, publisher *OutboxPu
 			)
 
 			reader.Start()
-
-			go func() {
-				for err := range reader.Errors() {
-					switch e := err.(type) {
-					case *outbox.PublishError:
-						logrus.Printf("Failed to publish message | ID: %s | Error: %v",
-							e.Message.ID, e.Err)
-
-					case *outbox.UpdateError:
-						logrus.Printf("Failed to update message | ID: %s | Error: %v",
-							e.Message.ID, e.Err)
-
-					case *outbox.DeleteError:
-						logrus.Printf("Batch message deletion failed | Count: %d | Error: %v",
-							len(e.Messages), e.Err)
-						for _, msg := range e.Messages {
-							log.Printf("Failed to delete message | ID: %s", msg.ID)
-						}
-
-					case *outbox.ReadError:
-						logrus.Printf("Failed to read outbox messages | Error: %v", e.Err)
-
-					default:
-						logrus.Printf("Unexpected error occurred | Error: %v", e)
-					}
-				}
-			}()
+			go runOutboxLogger(reader)
 
 			logrus.Info("Outbox reader started")
 			return nil
@@ -97,4 +76,31 @@ func RunOutboxReader(lc fx.Lifecycle, pool *postgres.Client, publisher *OutboxPu
 			return nil
 		},
 	})
+}
+
+func runOutboxLogger(reader *outbox.Reader) {
+	for err := range reader.Errors() {
+		switch e := err.(type) {
+		case *outbox.PublishError:
+			logrus.Printf("Failed to publish message | ID: %s | Error: %v",
+				e.Message.ID, e.Err)
+
+		case *outbox.UpdateError:
+			logrus.Printf("Failed to update message | ID: %s | Error: %v",
+				e.Message.ID, e.Err)
+
+		case *outbox.DeleteError:
+			logrus.Printf("Batch message deletion failed | Count: %d | Error: %v",
+				len(e.Messages), e.Err)
+			for _, msg := range e.Messages {
+				log.Printf("Failed to delete message | ID: %s", msg.ID)
+			}
+
+		case *outbox.ReadError:
+			logrus.Printf("Failed to read outbox messages | Error: %v", e.Err)
+
+		default:
+			logrus.Printf("Unexpected error occurred | Error: %v", e)
+		}
+	}
 }

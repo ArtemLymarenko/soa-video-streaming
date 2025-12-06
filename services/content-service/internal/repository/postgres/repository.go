@@ -7,6 +7,7 @@ func Module() fx.Option {
 		fx.Provide(
 			NewMediaContent,
 			NewCategories,
+			NewStorageRepository,
 		),
 	)
 }

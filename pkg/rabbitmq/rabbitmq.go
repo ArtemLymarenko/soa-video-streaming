@@ -1,10 +1,11 @@
 package rabbitmq
 
 import (
+	"fmt"
+	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/wagslane/go-rabbitmq"
 	"go.uber.org/fx"
 	"time"
-
-	"github.com/wagslane/go-rabbitmq"
 )
 
 func Module() fx.Option {
@@ -15,10 +16,8 @@ func Module() fx.Option {
 }
 
 type Config struct {
-	URL               string        `mapstructure:"url"`
-	ReconnectAttempts int           `mapstructure:"reconnect_attempts"`
-	ReconnectDelay    time.Duration `mapstructure:"reconnect_delay"`
-	PrefetchCount     int           `mapstructure:"prefetch_count"`
+	URL            string        `mapstructure:"url"`
+	ReconnectDelay time.Duration `mapstructure:"reconnect_delay"`
 }
 
 type Client struct {
@@ -41,38 +40,65 @@ func NewClient(cfg *Config) (*Client, error) {
 	}, nil
 }
 
-type Publisher struct {
-	*rabbitmq.Publisher
-}
-
-func (c *Client) NewPublisher() *Publisher {
-	publisher, err := rabbitmq.NewPublisher(c.Conn, rabbitmq.WithPublisherOptionsLogging)
+func (c *Client) withRawChannel(fn func(ch *amqp.Channel) error) error {
+	conn, err := amqp.Dial(c.cfg.URL)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("dial raw amqp: %w", err)
 	}
+	defer conn.Close()
 
-	return &Publisher{
-		Publisher: publisher,
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("open channel: %w", err)
 	}
+	defer ch.Close()
+
+	return fn(ch)
 }
 
-type Consumer struct {
-	*rabbitmq.Consumer
-}
-
-func (c *Client) NewConsumer(queue string) *Consumer {
-	consumer, err := rabbitmq.NewConsumer(
+func (c *Client) CreateExchange(exchangeName string, kind string) error {
+	p, err := rabbitmq.NewPublisher(
 		c.Conn,
-		queue,
-		rabbitmq.WithConsumerOptionsQOSPrefetch(c.cfg.PrefetchCount),
-		rabbitmq.WithConsumerOptionsLogging,
-		rabbitmq.WithConsumerOptionsQueueDurable,
+		rabbitmq.WithPublisherOptionsExchangeDeclare,
+		rabbitmq.WithPublisherOptionsExchangeName(exchangeName),
+		rabbitmq.WithPublisherOptionsExchangeKind(kind),
 	)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to init DLX/DLQ publisher: %w", err)
 	}
 
-	return &Consumer{
-		Consumer: consumer,
-	}
+	p.Close()
+	return nil
+}
+
+func (c *Client) CreateQueue(name string, durable, autoDelete, exclusive bool) error {
+	return c.withRawChannel(func(ch *amqp.Channel) error {
+		_, err := ch.QueueDeclare(
+			name,
+			durable,
+			autoDelete,
+			exclusive,
+			false,
+			nil,
+		)
+		if err != nil {
+			return fmt.Errorf("queue declare %q: %w", name, err)
+		}
+		return nil
+	})
+}
+
+func (c *Client) BindQueue(queue, exchange, routingKey string) error {
+	return c.withRawChannel(func(ch *amqp.Channel) error {
+		if err := ch.QueueBind(
+			queue,
+			routingKey,
+			exchange,
+			false,
+			nil,
+		); err != nil {
+			return fmt.Errorf("queue bind %q -> %q: %w", queue, exchange, err)
+		}
+		return nil
+	})
 }

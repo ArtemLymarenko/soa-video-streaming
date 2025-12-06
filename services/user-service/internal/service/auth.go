@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/sirupsen/logrus"
+	gorabbit "github.com/wagslane/go-rabbitmq"
+	"soa-video-streaming/pkg/rabbitmq"
 	"time"
 
 	"soa-video-streaming/services/notification-service/pkg/notifications"
@@ -25,6 +28,7 @@ type AuthService struct {
 	tm           *postgres.TransactionManager
 	jwtSecretKey string
 	ttl          time.Duration
+	client       *rabbitmq.Client
 }
 
 func NewAuthService(
@@ -33,6 +37,7 @@ func NewAuthService(
 	outboxRepo *postgres.OutboxRepository,
 	tm *postgres.TransactionManager,
 	cfg *config.AppConfig,
+	client *rabbitmq.Client,
 ) *AuthService {
 	return &AuthService{
 		usersRepo:    usersRepo,
@@ -41,6 +46,7 @@ func NewAuthService(
 		tm:           tm,
 		jwtSecretKey: cfg.Auth.JwtSecretKey,
 		ttl:          cfg.Auth.JwtTTL,
+		client:       client,
 	}
 }
 
@@ -90,7 +96,7 @@ func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult,
 		msg := outbox.NewMessage(eventJSON,
 			outbox.WithID(uuid.New()),
 			outbox.WithCreatedAt(time.Now()),
-			outbox.WithMetadata([]byte(notifications.SignUpEventQueueName)),
+			outbox.WithMetadata([]byte(notifications.QueueSignUpEvent)),
 		)
 
 		return a.outboxRepo.WithTx(tx).Save(ctx, msg)
@@ -108,6 +114,27 @@ func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult,
 	return AuthResult{
 		AccessToken: token,
 	}, nil
+}
+
+func (a *AuthService) RunSignUpRollback() error {
+	if err := a.client.CreateExchange("global.dlx", "fanout"); err != nil {
+		return err
+	}
+
+	consumer, err := gorabbit.NewConsumer(
+		a.client.Conn,
+		"user-service.dlq",
+		gorabbit.WithConsumerOptionsLogger(logrus.StandardLogger()),
+	)
+	if err != nil {
+		return err
+	}
+
+	handler := func(d gorabbit.Delivery) gorabbit.Action {
+		return 0
+	}
+
+	return consumer.Run(handler)
 }
 
 func (a *AuthService) SignIn(ctx context.Context, email, password string) (AuthResult, error) {

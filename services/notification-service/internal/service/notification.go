@@ -2,11 +2,13 @@ package service
 
 import (
 	"encoding/json"
+	"soa-video-streaming/pkg/rabbitmq"
+	"soa-video-streaming/services/notification-service/internal/config"
+	"soa-video-streaming/services/notification-service/pkg/notifications"
+
 	"github.com/sirupsen/logrus"
 	gorabbit "github.com/wagslane/go-rabbitmq"
 	"go.uber.org/fx"
-	"soa-video-streaming/pkg/rabbitmq"
-	"soa-video-streaming/services/notification-service/pkg/notifications"
 )
 
 func Module() fx.Option {
@@ -19,19 +21,30 @@ func Module() fx.Option {
 }
 
 type NotificationService struct {
-	client    *rabbitmq.Client
-	publisher *rabbitmq.Publisher
+	client *rabbitmq.Client
+	cfg    *config.AppConfig
 }
 
-func NewNotificationService(client *rabbitmq.Client) (*NotificationService, error) {
+func NewNotificationService(client *rabbitmq.Client, cfg *config.AppConfig) (*NotificationService, error) {
 	return &NotificationService{
-		client:    client,
-		publisher: client.NewPublisher(),
+		client: client,
+		cfg:    cfg,
 	}, nil
 }
 
 func (n *NotificationService) RunSignUpEventHandler() error {
-	consumer := n.client.NewConsumer(notifications.SignUpEventQueueName)
+	consumer, err := gorabbit.NewConsumer(
+		n.client.Conn,
+		notifications.QueueSignUpEvent,
+		gorabbit.WithConsumerOptionsLogger(logrus.StandardLogger()),
+		gorabbit.WithConsumerOptionsQueueDurable,
+		gorabbit.WithConsumerOptionsQueueArgs(map[string]interface{}{
+			"x-dead-letter-exchange": "global.dlx",
+		}),
+	)
+	if err != nil {
+		return err
+	}
 
 	handler := func(d gorabbit.Delivery) gorabbit.Action {
 		var event notifications.EventSignUp
@@ -52,32 +65,4 @@ func (n *NotificationService) RunSignUpEventHandler() error {
 	}
 
 	return consumer.Run(handler)
-}
-
-const maxSignUpRetries = 3
-
-func (n *NotificationService) RetrySignUp(d gorabbit.Delivery) gorabbit.Action {
-	var retryCount int
-	if v, ok := d.Headers["x-retry-count"].(int32); ok {
-		retryCount = int(v)
-	}
-
-	if retryCount >= maxSignUpRetries {
-		logrus.Warnf("Retry limit reached (%d). Discarding message", retryCount)
-		return gorabbit.NackDiscard
-	}
-
-	retryCount++
-
-	err := n.publisher.Publish(d.Body, []string{notifications.SignUpEventQueueName}, gorabbit.WithPublishOptionsHeaders(gorabbit.Table{
-		"x-retry-count": retryCount,
-	}))
-	if err != nil {
-		logrus.WithError(err).Error("Failed to republish message during retry")
-		return gorabbit.NackRequeue
-	}
-
-	logrus.Info("Successfully republished message during retry")
-
-	return gorabbit.Ack
 }
