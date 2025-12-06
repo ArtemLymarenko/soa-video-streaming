@@ -13,7 +13,6 @@ import (
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/pkg/saga"
 	"soa-video-streaming/services/orchestrator-service/internal/config"
-	amqpcontrollers "soa-video-streaming/services/orchestrator-service/internal/controllers/amqp"
 	postgresrepo "soa-video-streaming/services/orchestrator-service/internal/repository/postgres"
 	"soa-video-streaming/services/orchestrator-service/internal/service"
 	amqptransport "soa-video-streaming/services/orchestrator-service/internal/transport/amqp"
@@ -27,9 +26,9 @@ func main() {
 		postgres.Module(),
 		rabbitmq.Module(),
 		saga.Module(),
+		saga.ModuleRabbitMQEventsController(),
 		postgresrepo.Module(),
 		service.Module(),
-		amqpcontrollers.Module(),
 		amqptransport.Module(),
 	)
 

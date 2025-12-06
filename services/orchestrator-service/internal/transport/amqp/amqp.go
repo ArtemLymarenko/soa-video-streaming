@@ -5,7 +5,8 @@ import (
 
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/orchestrator-service/domain"
-	amqpcontrollers "soa-video-streaming/services/orchestrator-service/internal/controllers/amqp"
+
+	"soa-video-streaming/pkg/saga"
 
 	"github.com/sirupsen/logrus"
 	gorabbit "github.com/wagslane/go-rabbitmq"
@@ -23,7 +24,7 @@ type Consumer struct {
 	Handler  func(d gorabbit.Delivery) gorabbit.Action
 }
 
-func GetAllConsumers(client *rabbitmq.Client, eventsController *amqpcontrollers.EventsController) ([]Consumer, error) {
+func GetAllConsumers(client *rabbitmq.Client, eventsController *saga.RabbitMQEventsController) ([]Consumer, error) {
 	var consumers []Consumer
 	userSignUpConsumer, err := gorabbit.NewConsumer(
 		client.Conn,
@@ -37,7 +38,7 @@ func GetAllConsumers(client *rabbitmq.Client, eventsController *amqpcontrollers.
 
 	consumers = append(consumers, Consumer{
 		Consumer: userSignUpConsumer,
-		Handler:  eventsController.HandleUserSignUpEvent,
+		Handler:  eventsController.HandleEvent,
 	})
 
 	bucketConsumer, err := gorabbit.NewConsumer(
@@ -52,7 +53,7 @@ func GetAllConsumers(client *rabbitmq.Client, eventsController *amqpcontrollers.
 
 	consumers = append(consumers, Consumer{
 		Consumer: bucketConsumer,
-		Handler:  eventsController.HandleBucketEvents,
+		Handler:  eventsController.HandleEvent,
 	})
 
 	emailConsumer, err := gorabbit.NewConsumer(
@@ -67,13 +68,13 @@ func GetAllConsumers(client *rabbitmq.Client, eventsController *amqpcontrollers.
 
 	consumers = append(consumers, Consumer{
 		Consumer: emailConsumer,
-		Handler:  eventsController.HandleEmailEvents,
+		Handler:  eventsController.HandleEvent,
 	})
 
 	return consumers, nil
 }
 
-func RunConsumers(lc fx.Lifecycle, eventsController *amqpcontrollers.EventsController, client *rabbitmq.Client) error {
+func RunConsumers(lc fx.Lifecycle, eventsController *saga.RabbitMQEventsController, client *rabbitmq.Client) error {
 	var consumers []*gorabbit.Consumer
 
 	lc.Append(fx.Hook{
