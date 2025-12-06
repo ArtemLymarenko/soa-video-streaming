@@ -39,7 +39,6 @@ func NewRegisterUserWorkflow(coordinator *saga.Coordinator) *RegisterUserWorkflo
 
 func (w *RegisterUserWorkflow) Register() {
 	w.coordinator.
-		// Крок 1: Створити bucket для користувача
 		RegisterStep(saga.StepDefinition{
 			Name:         "CreateBucket",
 			Command:      domain.CmdCreateBucket,
@@ -47,9 +46,8 @@ func (w *RegisterUserWorkflow) Register() {
 			Service:      "content-service",
 			SuccessEvent: domain.EventBucketCreated,
 			FailureEvent: domain.EventBucketFailed,
-			OnFailure:    []string{domain.CmdCompensateUser}, // якщо bucket не створився → видалити користувача
+			OnFailure:    []string{domain.CmdCompensateUser},
 		}).
-		// Крок 2: Відправити email користувачу
 		RegisterStep(saga.StepDefinition{
 			Name:         "SendEmail",
 			Command:      domain.CmdSendEmail,
@@ -57,12 +55,10 @@ func (w *RegisterUserWorkflow) Register() {
 			Service:      "notification-service",
 			SuccessEvent: domain.EventEmailSent,
 			FailureEvent: domain.EventEmailFailed,
-			OnFailure:    []string{domain.CmdCompensateBucket, domain.CmdCompensateUser}, // якщо email не відправився → видалити bucket та користувача
+			OnFailure:    []string{domain.CmdCompensateBucket, domain.CmdCompensateUser},
 		}).
-		// Явно вказуємо destinations для компенсаційних команд
 		RegisterCompensationCommand(domain.CmdCompensateUser, domain.QueueUserCommands, "user-service").
 		RegisterCompensationCommand(domain.CmdCompensateBucket, domain.QueueContentCommands, "content-service").
-		// Обробники подій
 		On(domain.EventUserSignUp, w.HandleUserSignUp).
 		On(domain.EventBucketCreated, w.HandleBucketCreated).
 		On(domain.EventEmailSent, w.HandleEmailSent)
