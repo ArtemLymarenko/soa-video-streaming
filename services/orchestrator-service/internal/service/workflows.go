@@ -13,10 +13,12 @@ func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
 			NewRegisterUserWorkflow,
+			NewOutboxPublisher,
 		),
 		fx.Invoke(func(rw *RegisterUserWorkflow) {
 			rw.Register()
 		}),
+		fx.Invoke(RunOutboxReader),
 	)
 }
 
@@ -41,18 +43,18 @@ func (w *RegisterUserWorkflow) Register() {
 	w.coordinator.
 		RegisterStep(saga.StepDefinition{
 			Name:         "CreateBucket",
+			Service:      "content-service",
 			Command:      domain.CmdCreateBucket,
 			Queue:        domain.QueueContentCommands,
-			Service:      "content-service",
 			SuccessEvent: domain.EventBucketCreated,
 			FailureEvent: domain.EventBucketFailed,
 			OnFailure:    []string{domain.CmdCompensateUser},
 		}).
 		RegisterStep(saga.StepDefinition{
 			Name:         "SendEmail",
+			Service:      "notification-service",
 			Command:      domain.CmdSendEmail,
 			Queue:        domain.QueueNotificationCommands,
-			Service:      "notification-service",
 			SuccessEvent: domain.EventEmailSent,
 			FailureEvent: domain.EventEmailFailed,
 			OnFailure:    []string{domain.CmdCompensateBucket, domain.CmdCompensateUser},

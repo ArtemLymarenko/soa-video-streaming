@@ -10,7 +10,9 @@ func Module() fx.Option {
 			NewAuthService,
 			NewUsersService,
 			NewOutboxPublisher,
+			NewUserSagaHandler,
 		),
 		fx.Invoke(RunOutboxReader),
+		fx.Invoke(RunSagaConsumer),
 	)
 }

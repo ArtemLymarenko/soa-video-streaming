@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/sirupsen/logrus"
-	gorabbit "github.com/wagslane/go-rabbitmq"
 	"soa-video-streaming/pkg/rabbitmq"
 	"time"
 
@@ -114,27 +112,6 @@ func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult,
 	return AuthResult{
 		AccessToken: token,
 	}, nil
-}
-
-func (a *AuthService) RunSignUpRollback() error {
-	if err := a.client.CreateExchange("global.dlx", "fanout"); err != nil {
-		return err
-	}
-
-	consumer, err := gorabbit.NewConsumer(
-		a.client.Conn,
-		"user-service.dlq",
-		gorabbit.WithConsumerOptionsLogger(logrus.StandardLogger()),
-	)
-	if err != nil {
-		return err
-	}
-
-	handler := func(d gorabbit.Delivery) gorabbit.Action {
-		return 0
-	}
-
-	return consumer.Run(handler)
 }
 
 func (a *AuthService) SignIn(ctx context.Context, email, password string) (AuthResult, error) {

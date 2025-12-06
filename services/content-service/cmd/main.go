@@ -8,6 +8,7 @@ import (
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/content-service/internal/config"
 	postgresRepos "soa-video-streaming/services/content-service/internal/repository/postgres"
+	"soa-video-streaming/services/content-service/internal/saga"
 	"soa-video-streaming/services/content-service/internal/service"
 	grpctransport "soa-video-streaming/services/content-service/internal/transport/grpc"
 	"soa-video-streaming/services/content-service/internal/transport/rest"
@@ -28,6 +29,7 @@ func main() {
 		grpcsrv.ClientModule(),
 		service.Module(),
 		rest.Module(),
+		saga.Module(),
 		grpctransport.ClientModule(),
 		grpctransport.Module(),
 	).Run()

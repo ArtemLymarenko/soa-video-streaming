@@ -1,11 +1,23 @@
 package domain
 
+//TODO: remove unused constants
+
+// WE NEED
+// EventUserSignUp -> EventBucketCreated -> EventEmailSent
+
+// So we only need CompensateSignUp and CompensateBucket if notification failed
+// Or CompensateSignUp if CompesateBucket failed
+
+// THE END!
+
 const (
-	EventUserSignUp    = "saga.user.signup"
-	EventBucketCreated = "saga.bucket.created"
-	EventBucketFailed  = "saga.bucket.failed"
-	EventEmailSent     = "saga.email.sent"
-	EventEmailFailed   = "saga.email.failed"
+	EventUserSignUp             = "saga.user.signup"
+	EventBucketCreated          = "saga.bucket.created"
+	EventBucketFailed           = "saga.bucket.failed"
+	EventEmailSent              = "saga.email.sent"
+	EventEmailFailed            = "saga.email.failed"
+	EventUserCompensated        = "saga.user.compensated"
+	EventUserCompensationFailed = "saga.user.compensation_failed"
 )
 
 const (
@@ -22,6 +34,8 @@ const (
 	QueueContentCommands      = "saga.content.commands"
 	QueueUserCommands         = "saga.user.commands"
 	QueueNotificationCommands = "saga.notification.commands"
+	QueueUserEvents           = "saga.user.events"
+	QueueUserCompensated      = "saga.user.compensated"
 )
 
 type UserSignUpPayload struct {

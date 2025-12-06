@@ -84,3 +84,9 @@ func (r *UsersRepository) Save(ctx context.Context, user entity.User) error {
 
 	return nil
 }
+
+func (r *UsersRepository) Delete(ctx context.Context, id string) error {
+	q := `DELETE FROM user_service.users WHERE id = $1`
+	_, err := r.db.Exec(ctx, q, id)
+	return err
+}

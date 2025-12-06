@@ -7,26 +7,41 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
 
+	"soa-video-streaming/pkg/postgres"
 	"soa-video-streaming/pkg/saga"
 )
 
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			NewSagaRepository,
+			fx.Annotate(
+				NewSagaRepository,
+				fx.As(new(saga.Repository)),
+			),
+			fx.Annotate(
+				NewOutboxRepository,
+				fx.As(new(saga.OutboxRepository)),
+			),
+			fx.Annotate(
+				NewTransactionManager,
+				fx.As(new(saga.TransactionManager)),
+			),
 		),
 	)
 }
 
 type SagaRepository struct {
-	pool *pgxpool.Pool
+	db postgres.DB
 }
 
-func NewSagaRepository(pool *pgxpool.Pool) *SagaRepository {
-	return &SagaRepository{pool: pool}
+func NewSagaRepository(client *postgres.Client) *SagaRepository {
+	return &SagaRepository{db: client.Pool}
+}
+
+func (r *SagaRepository) WithTx(tx pgx.Tx) *SagaRepository {
+	return &SagaRepository{db: tx}
 }
 
 func (r *SagaRepository) Create(ctx context.Context, correlationID string, status saga.SagaStateStatus, data json.RawMessage) (*saga.SagaStateEntity, error) {
@@ -50,7 +65,7 @@ func (r *SagaRepository) Create(ctx context.Context, correlationID string, statu
 	`
 
 	var err error
-	_, err = r.pool.Exec(ctx, query,
+	_, err = r.db.Exec(ctx, query,
 		sagaState.ID,
 		sagaState.CorrelationID,
 		sagaState.Status,
@@ -78,7 +93,7 @@ func (r *SagaRepository) Update(ctx context.Context, correlationID string, statu
 		WHERE correlation_id = $4
 	`
 
-	_, err := r.pool.Exec(ctx, query, status, dataJSON, time.Now(), correlationID)
+	_, err := r.db.Exec(ctx, query, status, dataJSON, time.Now(), correlationID)
 	return err
 }
 
@@ -89,7 +104,7 @@ func (r *SagaRepository) Complete(ctx context.Context, correlationID string) err
 		WHERE correlation_id = $4
 	`
 
-	_, err := r.pool.Exec(ctx, query, saga.SagaStateCompleted, time.Now(), time.Now(), correlationID)
+	_, err := r.db.Exec(ctx, query, saga.SagaStateCompleted, time.Now(), time.Now(), correlationID)
 	return err
 }
 
@@ -104,7 +119,7 @@ func (r *SagaRepository) FindByCorrelationID(ctx context.Context, correlationID 
 	var dataJSON []byte
 	var completedAt *time.Time
 
-	err := r.pool.QueryRow(ctx, query, correlationID).Scan(
+	err := r.db.QueryRow(ctx, query, correlationID).Scan(
 		&sagaState.ID,
 		&sagaState.CorrelationID,
 		&sagaState.Status,
@@ -139,7 +154,7 @@ func (r *SagaRepository) AddStep(ctx context.Context, sagaStateID, stepName, ser
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
-	_, err := r.pool.Exec(ctx, query,
+	_, err := r.db.Exec(ctx, query,
 		uuid.NewString(),
 		sagaStateID,
 		stepName,
@@ -160,7 +175,7 @@ func (r *SagaRepository) UpdateStep(ctx context.Context, sagaStateID, stepName s
 		WHERE saga_state_id = $4 AND step_name = $5
 	`
 
-	_, err := r.pool.Exec(ctx, query, status, errorMessage, now, sagaStateID, stepName)
+	_, err := r.db.Exec(ctx, query, status, errorMessage, now, sagaStateID, stepName)
 	return err
 }
 
@@ -172,7 +187,7 @@ func (r *SagaRepository) GetSteps(ctx context.Context, sagaStateID string) ([]sa
 		ORDER BY created_at ASC
 	`
 
-	rows, err := r.pool.Query(ctx, query, sagaStateID)
+	rows, err := r.db.Query(ctx, query, sagaStateID)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package service
+package mocks
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 
 type S3Mock struct{}
 
-func NewS3Mock() *S3Mock {
+func NewS3() *S3Mock {
 	return &S3Mock{}
 }
 
