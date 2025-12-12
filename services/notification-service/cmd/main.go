@@ -4,6 +4,7 @@ import (
 	"flag"
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/notification-service/internal/config"
+	"soa-video-streaming/services/notification-service/internal/saga"
 	"soa-video-streaming/services/notification-service/internal/service"
 
 	"go.uber.org/fx"
@@ -16,5 +17,6 @@ func main() {
 		config.Module(),
 		rabbitmq.Module(),
 		service.Module(),
+		saga.Module(),
 	).Run()
 }

@@ -1,13 +1,10 @@
 package domain
 
 const (
-	EventUserSignUp             = "event.user.signup"
-	EventBucketCreated          = "event.content.bucket_created"
-	EventBucketFailed           = "event.content.bucket_failed"
-	EventEmailSent              = "event.notification.email_sent"
-	EventEmailFailed            = "event.notification.email_failed"
-	EventUserCompensated        = "event.user.compensated"
-	EventUserCompensationFailed = "event.user.compensation_failed"
+	EventUserSignUp      = "event.user.signup"
+	EventBucketCreated   = "event.content.bucket_created"
+	EventEmailSent       = "event.notification.email_sent"
+	EventUserCompensated = "event.user.compensated"
 )
 
 const (
@@ -18,8 +15,9 @@ const (
 )
 
 const (
-	QueueUserSignUp         = "queue.user.signup"
-	QueueSagaErrors         = "queue.saga.errors"
+	QueueUserSignUp = "queue.user.signup"
+	QueueSagaErrors = "queue.saga.errors"
+
 	QueueContentEvents      = "queue.content.events"
 	QueueNotificationEvents = "queue.notification.events"
 	QueueUserEvents         = "queue.user.events"
@@ -34,6 +32,10 @@ type UserSignUpPayload struct {
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+}
+
+type CompensateUserSignUpPayload struct {
+	UserID string `json:"user_id"`
 }
 
 type BucketPayload struct {

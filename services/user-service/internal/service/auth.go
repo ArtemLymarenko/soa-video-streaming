@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"soa-video-streaming/pkg/rabbitmq"
+	"soa-video-streaming/pkg/saga"
+	"soa-video-streaming/services/orchestrator-service/domain"
 	"time"
 
 	"soa-video-streaming/services/notification-service/pkg/notifications"
@@ -16,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/oagudo/outbox"
+	gorabbit "github.com/wagslane/go-rabbitmq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,6 +31,8 @@ type AuthService struct {
 	jwtSecretKey string
 	ttl          time.Duration
 	client       *rabbitmq.Client
+
+	sagaPub *gorabbit.Publisher
 }
 
 func NewAuthService(
@@ -37,6 +43,14 @@ func NewAuthService(
 	cfg *config.AppConfig,
 	client *rabbitmq.Client,
 ) *AuthService {
+	pub, err := gorabbit.NewPublisher(
+		client.Conn,
+		gorabbit.WithPublisherOptionsLogger(nil),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return &AuthService{
 		usersRepo:    usersRepo,
 		userInfoRepo: userInfoRepo,
@@ -45,6 +59,7 @@ func NewAuthService(
 		jwtSecretKey: cfg.Auth.JwtSecretKey,
 		ttl:          cfg.Auth.JwtTTL,
 		client:       client,
+		sagaPub:      pub,
 	}
 }
 
@@ -52,7 +67,7 @@ type AuthResult struct {
 	AccessToken string
 }
 
-func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult, error) {
+func (a *AuthService) SignUp(ctx context.Context, isSaga bool, user entity.User) (AuthResult, error) {
 	actualUser, err := a.usersRepo.FindByEmail(ctx, user.Email)
 	if err != nil {
 		return AuthResult{}, err
@@ -99,9 +114,14 @@ func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult,
 
 		return a.outboxRepo.WithTx(tx).Save(ctx, msg)
 	})
-
 	if err != nil {
 		return AuthResult{}, err
+	}
+
+	if isSaga {
+		if err = a.UserSignUpSaga(ctx, user); err != nil {
+			return AuthResult{}, err
+		}
 	}
 
 	token, err := a.generateAccessToken(user)
@@ -112,6 +132,38 @@ func (a *AuthService) SignUp(ctx context.Context, user entity.User) (AuthResult,
 	return AuthResult{
 		AccessToken: token,
 	}, nil
+}
+
+func (a *AuthService) UserSignUpSaga(_ context.Context, user entity.User) error {
+	payload := domain.UserSignUpPayload{
+		UserID:    user.Id,
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+	}
+
+	rawPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	msg := saga.Message{
+		CorrelationID: uuid.NewString(),
+		Type:          domain.EventUserSignUp,
+		Payload:       rawPayload,
+		Timestamp:     time.Now(),
+	}
+
+	rawMsg, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	return a.sagaPub.Publish(
+		rawMsg,
+		[]string{domain.QueueUserSignUp},
+		gorabbit.WithPublishOptionsContentType("application/json"),
+	)
 }
 
 func (a *AuthService) SignIn(ctx context.Context, email, password string) (AuthResult, error) {

@@ -8,6 +8,13 @@ import (
 	"go.uber.org/fx"
 )
 
+func Module() fx.Option {
+	return fx.Options(
+		fx.Provide(NewNotificationSagaHandler),
+		fx.Invoke(RegisterNotificationActor),
+	)
+}
+
 func RegisterNotificationActor(
 	lc fx.Lifecycle,
 	client *rabbitmq.Client,
@@ -24,7 +31,6 @@ func RegisterNotificationActor(
 		domain.CmdSendEmail,
 		handler.HandleSendEmail,
 		domain.EventEmailSent,
-		"", // Failure handled by DLQ
 		domain.QueueNotificationEvents,
 	)
 

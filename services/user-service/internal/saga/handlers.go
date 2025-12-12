@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"soa-video-streaming/services/orchestrator-service/domain"
 
 	"soa-video-streaming/pkg/saga"
 	"soa-video-streaming/services/user-service/internal/repository/postgres"
@@ -22,10 +23,7 @@ func NewUserSagaHandler(usersRepo *postgres.UsersRepository) *UserSagaHandler {
 }
 
 func (h *UserSagaHandler) HandleCompensateUser(ctx context.Context, msg *saga.Message) (any, error) {
-	var payload struct {
-		UserID string `json:"user_id"`
-	}
-
+	var payload domain.CompensateUserSignUpPayload
 	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 		return nil, fmt.Errorf("unmarshal payload: %w", err)
 	}

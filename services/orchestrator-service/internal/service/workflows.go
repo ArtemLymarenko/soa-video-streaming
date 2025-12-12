@@ -26,13 +26,6 @@ type RegisterUserWorkflow struct {
 	coordinator *saga.Coordinator
 }
 
-type RegisterUserSagaState struct {
-	UserID    string `json:"user_id"`
-	Email     string `json:"email"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-}
-
 func NewRegisterUserWorkflow(coordinator *saga.Coordinator) *RegisterUserWorkflow {
 	return &RegisterUserWorkflow{
 		coordinator: coordinator,
@@ -42,25 +35,26 @@ func NewRegisterUserWorkflow(coordinator *saga.Coordinator) *RegisterUserWorkflo
 func (w *RegisterUserWorkflow) Register() {
 	w.coordinator.
 		RegisterStep(saga.StepDefinition{
-			Name:         "CreateBucket",
 			Service:      "content-service",
 			Command:      domain.CmdCreateBucket,
 			Queue:        domain.QueueContentCommands,
 			SuccessEvent: domain.EventBucketCreated,
-			FailureEvent: domain.EventBucketFailed,
-			OnFailure:    []string{domain.CmdCompensateUser},
+			Compensations: []string{
+				domain.CmdCompensateUser,
+			},
 		}).
 		RegisterStep(saga.StepDefinition{
-			Name:         "SendEmail",
 			Service:      "notification-service",
 			Command:      domain.CmdSendEmail,
 			Queue:        domain.QueueNotificationCommands,
 			SuccessEvent: domain.EventEmailSent,
-			FailureEvent: domain.EventEmailFailed,
-			OnFailure:    []string{domain.CmdCompensateBucket, domain.CmdCompensateUser},
+			Compensations: []string{
+				domain.CmdCompensateBucket,
+				domain.CmdCompensateUser,
+			},
 		}).
-		RegisterCompensationCommand(domain.CmdCompensateUser, domain.QueueUserCommands, "user-service").
-		RegisterCompensationCommand(domain.CmdCompensateBucket, domain.QueueContentCommands, "content-service").
+		RegisterCompensationQueue(domain.CmdCompensateUser, domain.QueueUserCommands).
+		RegisterCompensationQueue(domain.CmdCompensateBucket, domain.QueueContentCommands).
 		On(domain.EventUserSignUp, w.HandleUserSignUp).
 		On(domain.EventBucketCreated, w.HandleBucketCreated).
 		On(domain.EventEmailSent, w.HandleEmailSent)
@@ -72,13 +66,7 @@ func (w *RegisterUserWorkflow) HandleUserSignUp(_ context.Context, event *saga.E
 		return err
 	}
 
-	state := RegisterUserSagaState{
-		UserID:    payload.UserID,
-		Email:     payload.Email,
-		FirstName: payload.FirstName,
-		LastName:  payload.LastName,
-	}
-	if err := event.SetState(state); err != nil {
+	if err := event.SetState(payload); err != nil {
 		return err
 	}
 
@@ -87,13 +75,30 @@ func (w *RegisterUserWorkflow) HandleUserSignUp(_ context.Context, event *saga.E
 	})
 }
 
+func (w *RegisterUserWorkflow) HandleCompensateUserSignUp(_ context.Context, event *saga.Event) error {
+	var state domain.UserSignUpPayload
+	if err := event.GetState(&state); err != nil {
+		return err
+	}
+
+	event.SendCommand(domain.CmdCompensateBucket, domain.CompensateUserSignUpPayload{
+		UserID: state.UserID,
+	})
+
+	event.SendCommand(domain.CmdCompensateUser, domain.CompensateUserSignUpPayload{
+		UserID: state.UserID,
+	})
+
+	return nil
+}
+
 func (w *RegisterUserWorkflow) HandleBucketCreated(_ context.Context, event *saga.Event) error {
 	var payload domain.BucketPayload
 	if err := event.UnmarshalPayload(&payload); err != nil {
 		return err
 	}
 
-	var state RegisterUserSagaState
+	var state domain.UserSignUpPayload
 	if err := event.GetState(&state); err != nil {
 		return err
 	}

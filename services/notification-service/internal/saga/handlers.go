@@ -25,6 +25,10 @@ func (h *NotificationSagaHandler) HandleSendEmail(ctx context.Context, msg *saga
 		return nil, fmt.Errorf("unmarshal payload: %w", err)
 	}
 
+	if payload.FirstName == "Artem" {
+		return nil, fmt.Errorf("first name is required")
+	}
+
 	// Logic to send email would go here.
 	logrus.WithFields(logrus.Fields{
 		"user_id": payload.UserID,

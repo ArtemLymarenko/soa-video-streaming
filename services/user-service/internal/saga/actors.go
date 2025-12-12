@@ -24,7 +24,6 @@ func RegisterUserActor(
 		domain.CmdCompensateUser,
 		handler.HandleCompensateUser,
 		domain.EventUserCompensated,
-		domain.EventUserCompensationFailed,
 		domain.QueueUserEvents,
 	)
 

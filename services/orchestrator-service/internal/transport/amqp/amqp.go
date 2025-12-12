@@ -15,7 +15,6 @@ import (
 
 func Module() fx.Option {
 	return fx.Options(
-		fx.Provide(NewPublisher),
 		fx.Invoke(RunConsumers),
 	)
 }

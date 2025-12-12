@@ -15,7 +15,6 @@ type CommandHandler func(ctx context.Context, msg *Message) (any, error)
 type actorHandler struct {
 	handler      CommandHandler
 	successEvent string
-	failureEvent string
 	replyQueue   string
 }
 
@@ -82,11 +81,10 @@ func NewActor(lc fx.Lifecycle, conn *gorabbit.Conn, outboxRepo OutboxRepository,
 	return actor
 }
 
-func (a *Actor) Register(cmdType string, handler CommandHandler, successEvent, failureEvent, replyQueue string) {
+func (a *Actor) Register(cmdType string, handler CommandHandler, successEvent, replyQueue string) {
 	a.handlers[cmdType] = actorHandler{
 		handler:      handler,
 		successEvent: successEvent,
-		failureEvent: failureEvent,
 		replyQueue:   replyQueue,
 	}
 }
@@ -94,37 +92,25 @@ func (a *Actor) Register(cmdType string, handler CommandHandler, successEvent, f
 func (a *Actor) handleMessage(d gorabbit.Delivery) gorabbit.Action {
 	var msg Message
 	if err := json.Unmarshal(d.Body, &msg); err != nil {
-		logrus.WithError(err).Error("Failed to unmarshal saga message")
 		return gorabbit.NackDiscard
 	}
 
 	handler, ok := a.handlers[msg.Type]
 	if !ok {
-		logrus.WithField("type", msg.Type).Warn("No handler registered for command")
 		return gorabbit.NackDiscard
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"type":           msg.Type,
-		"correlation_id": msg.CorrelationID,
-	}).Info("Handling saga command")
-
-	// Execute handler
 	result, err := handler.handler(context.Background(), &msg)
-
 	if err != nil {
-		logrus.WithError(err).WithField("type", msg.Type).Error("Handler failed, Nacking message to DLQ")
-		return gorabbit.NackDiscard // Nack without requeue to send to DLQ
+		logrus.WithError(err).WithField("cmd", msg.Type).Error("Command failed, sending to DLQ")
+		return gorabbit.NackDiscard
 	}
 
-	// Determine response type
-	respType := handler.successEvent
-	var payload any = result
-
-	// Send reply
-	if err := a.sendReply(context.Background(), msg.CorrelationID, respType, handler.replyQueue, payload); err != nil {
-		logrus.WithError(err).Error("Failed to send reply")
-		return gorabbit.NackRequeue
+	if handler.successEvent != "" {
+		if err := a.sendReply(context.Background(), msg.CorrelationID, handler.successEvent, handler.replyQueue, result); err != nil {
+			logrus.WithError(err).Error("Failed to send reply event")
+			return gorabbit.NackRequeue
+		}
 	}
 
 	return gorabbit.Ack

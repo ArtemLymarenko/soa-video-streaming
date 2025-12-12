@@ -12,7 +12,6 @@ type SagaStateStatus string
 const (
 	SagaStateStarted      SagaStateStatus = "STARTED"
 	SagaStateCompleted    SagaStateStatus = "COMPLETED"
-	SagaStateFailed       SagaStateStatus = "FAILED"
 	SagaStateCompensating SagaStateStatus = "COMPENSATING"
 	SagaStateCompensated  SagaStateStatus = "COMPENSATED"
 )
@@ -20,11 +19,9 @@ const (
 type StepStatus string
 
 const (
-	StepStatusPending      StepStatus = "PENDING"
-	StepStatusCompleted    StepStatus = "COMPLETED"
-	StepStatusFailed       StepStatus = "FAILED"
-	StepStatusCompensating StepStatus = "COMPENSATING"
-	StepStatusCompensated  StepStatus = "COMPENSATED"
+	StepStatusPending   StepStatus = "PENDING"
+	StepStatusCompleted StepStatus = "COMPLETED"
+	StepStatusFailed    StepStatus = "FAILED"
 )
 
 type SagaStateEntity struct {
@@ -53,7 +50,6 @@ type Message struct {
 	CorrelationID string          `json:"correlation_id"`
 	Type          string          `json:"type"`
 	Payload       json.RawMessage `json:"payload"`
-	ReplyTo       string          `json:"reply_to,omitempty"`
 	Timestamp     time.Time       `json:"timestamp"`
 }
 

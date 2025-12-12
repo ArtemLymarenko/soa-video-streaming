@@ -7,6 +7,7 @@ import (
 	"soa-video-streaming/services/user-service/internal/controller/rest/dto"
 	"soa-video-streaming/services/user-service/internal/domain/entity"
 	"soa-video-streaming/services/user-service/internal/service"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,6 +31,8 @@ func (c *AuthController) SignUp(gc *gin.Context) {
 		return
 	}
 
+	isSaga, _ := strconv.ParseBool(gc.Query("is_saga"))
+
 	err := dto.GetValidator().Struct(req)
 	if err != nil {
 		gc.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -45,7 +48,7 @@ func (c *AuthController) SignUp(gc *gin.Context) {
 		},
 	}
 
-	authRes, err := c.authService.SignUp(gc, user)
+	authRes, err := c.authService.SignUp(gc, isSaga, user)
 	if err != nil {
 		gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

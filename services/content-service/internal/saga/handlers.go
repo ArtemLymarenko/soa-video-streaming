@@ -72,7 +72,7 @@ func (h *BucketsService) HandleCreateBucket(ctx context.Context, msg *saga.Messa
 }
 
 func (h *BucketsService) HandleCompensateBucket(ctx context.Context, msg *saga.Message) (any, error) {
-	var payload domain.BucketPayload
+	var payload domain.CompensateUserSignUpPayload
 	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 		return nil, fmt.Errorf("unmarshal payload: %w", err)
 	}
