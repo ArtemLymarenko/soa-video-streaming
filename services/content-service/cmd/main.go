@@ -7,6 +7,7 @@ import (
 	"soa-video-streaming/pkg/postgres"
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/content-service/internal/config"
+	"soa-video-streaming/services/content-service/internal/mocks"
 	postgresRepos "soa-video-streaming/services/content-service/internal/repository/postgres"
 	"soa-video-streaming/services/content-service/internal/saga"
 	"soa-video-streaming/services/content-service/internal/service"
@@ -32,5 +33,6 @@ func main() {
 		saga.Module(),
 		grpctransport.ClientModule(),
 		grpctransport.Module(),
+		mocks.Module(),
 	).Run()
 }

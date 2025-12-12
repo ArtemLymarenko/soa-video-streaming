@@ -2,9 +2,16 @@ package mocks
 
 import (
 	"fmt"
+	"go.uber.org/fx"
 
 	"github.com/sirupsen/logrus"
 )
+
+func Module() fx.Option {
+	return fx.Options(
+		fx.Provide(NewS3),
+	)
+}
 
 type S3Mock struct{}
 
