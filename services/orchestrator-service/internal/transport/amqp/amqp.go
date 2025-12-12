@@ -15,6 +15,7 @@ import (
 
 func Module() fx.Option {
 	return fx.Options(
+		fx.Provide(NewPublisher),
 		fx.Invoke(RunConsumers),
 	)
 }
@@ -43,7 +44,7 @@ func GetAllConsumers(client *rabbitmq.Client, eventsController *saga.RabbitMQEve
 
 	bucketConsumer, err := gorabbit.NewConsumer(
 		client.Conn,
-		domain.QueueBucketEvents,
+		domain.QueueContentEvents,
 		gorabbit.WithConsumerOptionsLogger(logrus.StandardLogger()),
 		gorabbit.WithConsumerOptionsQueueDurable,
 	)
@@ -58,7 +59,7 @@ func GetAllConsumers(client *rabbitmq.Client, eventsController *saga.RabbitMQEve
 
 	emailConsumer, err := gorabbit.NewConsumer(
 		client.Conn,
-		domain.QueueEmailEvents,
+		domain.QueueNotificationEvents,
 		gorabbit.WithConsumerOptionsLogger(logrus.StandardLogger()),
 		gorabbit.WithConsumerOptionsQueueDurable,
 	)
@@ -69,6 +70,21 @@ func GetAllConsumers(client *rabbitmq.Client, eventsController *saga.RabbitMQEve
 	consumers = append(consumers, Consumer{
 		Consumer: emailConsumer,
 		Handler:  eventsController.HandleEvent,
+	})
+
+	sagaErrorsConsumer, err := gorabbit.NewConsumer(
+		client.Conn,
+		domain.QueueSagaErrors,
+		gorabbit.WithConsumerOptionsLogger(logrus.StandardLogger()),
+		gorabbit.WithConsumerOptionsQueueDurable,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	consumers = append(consumers, Consumer{
+		Consumer: sagaErrorsConsumer,
+		Handler:  eventsController.HandleFailure,
 	})
 
 	return consumers, nil

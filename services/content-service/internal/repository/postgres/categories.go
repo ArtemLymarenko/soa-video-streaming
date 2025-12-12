@@ -18,14 +18,14 @@ func NewCategories(db *pgxpool.Pool) *CategoryRepository {
 }
 
 func (r *CategoryRepository) Create(ctx context.Context, c entity.Category) error {
-	q := `INSERT INTO media_content.categories (id, name, description) VALUES ($1, $2, $3)`
+	q := `INSERT INTO categories (id, name, description) VALUES ($1, $2, $3)`
 
 	_, err := r.db.Exec(ctx, q, c.ID, c.Name, c.Description)
 	return err
 }
 
 func (r *CategoryRepository) GetByID(ctx context.Context, id entity.CategoryID) (*entity.Category, error) {
-	q := `SELECT id, name, description FROM media_content.categories WHERE id = $1`
+	q := `SELECT id, name, description FROM categories WHERE id = $1`
 
 	row := r.db.QueryRow(ctx, q, id)
 
@@ -41,21 +41,21 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id entity.CategoryID) 
 }
 
 func (r *CategoryRepository) Update(ctx context.Context, c entity.Category) error {
-	q := `UPDATE media_content.categories SET name = $1, description = $2 WHERE id = $3`
+	q := `UPDATE categories SET name = $1, description = $2 WHERE id = $3`
 
 	_, err := r.db.Exec(ctx, q, c.Name, c.Description, c.ID)
 	return err
 }
 
 func (r *CategoryRepository) Delete(ctx context.Context, id entity.CategoryID) error {
-	q := `DELETE FROM media_content.categories WHERE id = $1`
+	q := `DELETE FROM categories WHERE id = $1`
 
 	_, err := r.db.Exec(ctx, q, id)
 	return err
 }
 
 func (r *CategoryRepository) GetByTimestamp(ctx context.Context, from, to int64) ([]entity.Category, error) {
-	q := `SELECT id, name, description FROM media_content.categories WHERE updated_at >= to_timestamp($1) AND updated_at <= to_timestamp($2)`
+	q := `SELECT id, name, description FROM categories WHERE updated_at >= to_timestamp($1) AND updated_at <= to_timestamp($2)`
 
 	rows, err := r.db.Query(ctx, q, from, to)
 	if err != nil {
@@ -84,7 +84,7 @@ func (r *CategoryRepository) GetMaxTimestamp(ctx context.Context) (int64, error)
 	q := `SELECT COALESCE(
             EXTRACT(EPOCH FROM MAX(updated_at))::bigint, 
             0
-        ) FROM media_content.categories`
+        ) FROM categories`
 
 	row := r.db.QueryRow(ctx, q)
 

@@ -39,3 +39,20 @@ func (c *RabbitMQEventsController) HandleEvent(d gorabbit.Delivery) gorabbit.Act
 
 	return gorabbit.Ack
 }
+
+func (c *RabbitMQEventsController) HandleFailure(d gorabbit.Delivery) gorabbit.Action {
+	var msg Message
+	if err := json.Unmarshal(d.Body, &msg); err != nil {
+		logrus.WithError(err).Error("Failed to unmarshal failure message from DLQ")
+		return gorabbit.NackDiscard
+	}
+
+	logrus.WithField("correlation_id", msg.CorrelationID).Infof("Handling failure for command: %s", msg.Type)
+
+	if err := c.coordinator.HandleCommandFailure(context.Background(), &msg); err != nil {
+		logrus.WithError(err).Error("Failed to handle command failure")
+		return gorabbit.NackRequeue
+	}
+
+	return gorabbit.Ack
+}

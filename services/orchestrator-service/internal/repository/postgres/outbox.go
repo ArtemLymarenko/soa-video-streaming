@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"soa-video-streaming/pkg/postgres"
+	"soa-video-streaming/pkg/saga"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/oagudo/outbox"
@@ -18,14 +19,14 @@ func NewOutboxRepository(db postgres.DB) *OutboxRepository {
 	}
 }
 
-func (r *OutboxRepository) WithTx(tx pgx.Tx) *OutboxRepository {
+func (r *OutboxRepository) WithTx(tx pgx.Tx) saga.OutboxRepository {
 	return &OutboxRepository{
 		db: tx,
 	}
 }
 
 const insertOutboxQuery = `
-INSERT INTO orchestrator_service.outbox (id, created_at, scheduled_at, metadata, payload, times_attempted)
+INSERT INTO outbox (id, created_at, scheduled_at, metadata, payload, times_attempted)
 VALUES ($1, $2, $3, $4, $5, $6)
 `
 

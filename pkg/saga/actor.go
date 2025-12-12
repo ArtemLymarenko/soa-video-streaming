@@ -48,6 +48,10 @@ func NewActor(lc fx.Lifecycle, conn *gorabbit.Conn, outboxRepo OutboxRepository,
 				queue,
 				gorabbit.WithConsumerOptionsLogger(logrus.StandardLogger()),
 				gorabbit.WithConsumerOptionsQueueDurable,
+				gorabbit.WithConsumerOptionsQueueArgs(map[string]any{
+					"x-dead-letter-exchange":    "",
+					"x-dead-letter-routing-key": "queue.saga.errors",
+				}),
 			)
 			if err != nil {
 				return fmt.Errorf("create consumer: %w", err)
@@ -108,15 +112,14 @@ func (a *Actor) handleMessage(d gorabbit.Delivery) gorabbit.Action {
 	// Execute handler
 	result, err := handler.handler(context.Background(), &msg)
 
+	if err != nil {
+		logrus.WithError(err).WithField("type", msg.Type).Error("Handler failed, Nacking message to DLQ")
+		return gorabbit.NackDiscard // Nack without requeue to send to DLQ
+	}
+
 	// Determine response type
 	respType := handler.successEvent
 	var payload any = result
-
-	if err != nil {
-		respType = handler.failureEvent
-		payload = map[string]string{"error": err.Error()}
-		logrus.WithError(err).WithField("type", msg.Type).Error("Handler failed")
-	}
 
 	// Send reply
 	if err := a.sendReply(context.Background(), msg.CorrelationID, respType, handler.replyQueue, payload); err != nil {

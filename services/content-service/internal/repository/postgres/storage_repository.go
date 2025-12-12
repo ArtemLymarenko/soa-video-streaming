@@ -19,7 +19,7 @@ func NewStorageRepository(pool *pgxpool.Pool) *StorageRepository {
 
 func (r *StorageRepository) Create(ctx context.Context, account entity.StorageAccount) error {
 	query := `
-		INSERT INTO content_service.user_storage_accounts (user_id, bucket_name, status, created_at)
+		INSERT INTO user_storage_accounts (user_id, bucket_name, status, created_at)
 		VALUES ($1, $2, $3, $4)
 	`
 
@@ -28,7 +28,7 @@ func (r *StorageRepository) Create(ctx context.Context, account entity.StorageAc
 }
 
 func (r *StorageRepository) Delete(ctx context.Context, userID string) error {
-	query := `DELETE FROM content_service.user_storage_accounts WHERE user_id = $1`
+	query := `DELETE FROM user_storage_accounts WHERE user_id = $1`
 	_, err := r.pool.Exec(ctx, query, userID)
 	return err
 }
@@ -36,7 +36,7 @@ func (r *StorageRepository) Delete(ctx context.Context, userID string) error {
 func (r *StorageRepository) FindByUserID(ctx context.Context, userID string) (*entity.StorageAccount, error) {
 	query := `
 		SELECT user_id, bucket_name, status, created_at
-		FROM content_service.user_storage_accounts
+		FROM user_storage_accounts
 		WHERE user_id = $1
 	`
 

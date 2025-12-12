@@ -62,26 +62,28 @@ type StepDefinition struct {
 }
 
 type Coordinator struct {
-	repo            Repository
-	publisher       MessagePublisher
-	tm              TransactionManager
-	outboxRepo      OutboxRepository
-	eventHandlers   map[string]EventHandlerFunc
-	failureCommands map[string][]string
-	commandDest     map[string]CommandDestination
-	eventToStep     map[string]string
+	repo             Repository
+	publisher        MessagePublisher
+	tm               TransactionManager
+	outboxRepo       OutboxRepository
+	eventHandlers    map[string]EventHandlerFunc
+	failureCommands  map[string][]string
+	commandDest      map[string]CommandDestination
+	eventToStep      map[string]string
+	commandToFailure map[string][]string
 }
 
 func NewCoordinator(repo Repository, publisher MessagePublisher, tm TransactionManager, outboxRepo OutboxRepository) *Coordinator {
 	return &Coordinator{
-		repo:            repo,
-		publisher:       publisher,
-		tm:              tm,
-		outboxRepo:      outboxRepo,
-		eventHandlers:   make(map[string]EventHandlerFunc),
-		failureCommands: make(map[string][]string),
-		commandDest:     make(map[string]CommandDestination),
-		eventToStep:     make(map[string]string),
+		repo:             repo,
+		publisher:        publisher,
+		tm:               tm,
+		outboxRepo:       outboxRepo,
+		eventHandlers:    make(map[string]EventHandlerFunc),
+		failureCommands:  make(map[string][]string),
+		commandDest:      make(map[string]CommandDestination),
+		eventToStep:      make(map[string]string),
+		commandToFailure: make(map[string][]string),
 	}
 }
 
@@ -101,6 +103,11 @@ func (c *Coordinator) RegisterStep(step StepDefinition) *Coordinator {
 
 	if step.FailureEvent != "" && len(step.OnFailure) > 0 {
 		c.failureCommands[step.FailureEvent] = step.OnFailure
+	}
+
+	// Map command directly to failure for DLQ handling
+	if len(step.OnFailure) > 0 {
+		c.commandToFailure[step.Command] = step.OnFailure
 	}
 
 	return c
@@ -246,6 +253,28 @@ func (c *Coordinator) PublishOutboxCommand(ctx context.Context, tx pgx.Tx, queue
 		outbox.WithCreatedAt(time.Now()),
 		outbox.WithMetadata([]byte(queueName)),
 	))
+}
+
+func (c *Coordinator) HandleCommandFailure(ctx context.Context, msg *Message) error {
+	state, err := c.GetOrCreateState(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("failed to get state for failure handling: %w", err)
+	}
+
+	if state == nil {
+		return fmt.Errorf("saga state not found for failure handling")
+	}
+
+	if state.Status == SagaStateCompleted || state.Status == SagaStateCompensated {
+		return nil
+	}
+
+	compensations, ok := c.commandToFailure[msg.Type]
+	if !ok {
+		return fmt.Errorf("no compensation defined for failed command: %s", msg.Type)
+	}
+
+	return c.ExecuteCompensation(ctx, state, compensations)
 }
 
 type Event struct {

@@ -20,8 +20,8 @@ func RegisterBucketsActor(lc fx.Lifecycle, service *BucketsService, client *rabb
 		domain.CmdCreateBucket,
 		service.HandleCreateBucket,
 		domain.EventBucketCreated,
-		domain.EventBucketFailed,
-		domain.QueueBucketEvents,
+		"", // Failure handled by DLQ
+		domain.QueueContentEvents,
 	)
 
 	actor.Register(
@@ -29,7 +29,7 @@ func RegisterBucketsActor(lc fx.Lifecycle, service *BucketsService, client *rabb
 		service.HandleCompensateBucket,
 		"", // No success event
 		"", // No failure event
-		domain.QueueBucketEvents,
+		"", // No reply queue needed
 	)
 
 	return actor

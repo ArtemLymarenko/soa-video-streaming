@@ -40,7 +40,7 @@ func NewSagaRepository(client *postgres.Client) *SagaRepository {
 	return &SagaRepository{db: client.Pool}
 }
 
-func (r *SagaRepository) WithTx(tx pgx.Tx) *SagaRepository {
+func (r *SagaRepository) WithTx(tx pgx.Tx) saga.Repository {
 	return &SagaRepository{db: tx}
 }
 
@@ -60,7 +60,7 @@ func (r *SagaRepository) Create(ctx context.Context, correlationID string, statu
 	}
 
 	query := `
-		INSERT INTO orchestrator_service.saga_state (id, correlation_id, state, data, created_at, updated_at)
+		INSERT INTO saga_state (id, correlation_id, state, data, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
@@ -88,7 +88,7 @@ func (r *SagaRepository) Update(ctx context.Context, correlationID string, statu
 	}
 
 	query := `
-		UPDATE orchestrator_service.saga_state
+		UPDATE saga_state
 		SET state = $1, data = $2, updated_at = $3
 		WHERE correlation_id = $4
 	`
@@ -99,7 +99,7 @@ func (r *SagaRepository) Update(ctx context.Context, correlationID string, statu
 
 func (r *SagaRepository) Complete(ctx context.Context, correlationID string) error {
 	query := `
-		UPDATE orchestrator_service.saga_state
+		UPDATE saga_state
 		SET state = $1, completed_at = $2, updated_at = $3
 		WHERE correlation_id = $4
 	`
@@ -111,7 +111,7 @@ func (r *SagaRepository) Complete(ctx context.Context, correlationID string) err
 func (r *SagaRepository) FindByCorrelationID(ctx context.Context, correlationID string) (*saga.SagaStateEntity, error) {
 	query := `
 		SELECT id, correlation_id, state, data, created_at, updated_at, completed_at
-		FROM orchestrator_service.saga_state
+		FROM saga_state
 		WHERE correlation_id = $1
 	`
 
@@ -150,7 +150,7 @@ func (r *SagaRepository) FindByCorrelationID(ctx context.Context, correlationID 
 
 func (r *SagaRepository) AddStep(ctx context.Context, sagaStateID, stepName, serviceName string, status saga.StepStatus) error {
 	query := `
-		INSERT INTO orchestrator_service.saga_steps (id, saga_state_id, step_name, service_name, status, created_at)
+		INSERT INTO saga_steps (id, saga_state_id, step_name, service_name, status, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 

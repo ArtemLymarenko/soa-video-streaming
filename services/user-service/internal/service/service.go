@@ -1,6 +1,8 @@
 package service
 
 import (
+	usersaga "soa-video-streaming/services/user-service/internal/saga"
+
 	"go.uber.org/fx"
 )
 
@@ -10,9 +12,9 @@ func Module() fx.Option {
 			NewAuthService,
 			NewUsersService,
 			NewOutboxPublisher,
-			NewUserSagaHandler,
+			usersaga.NewUserSagaHandler,
 		),
 		fx.Invoke(RunOutboxReader),
-		fx.Invoke(RunSagaConsumer),
+		fx.Invoke(usersaga.RegisterUserActor),
 	)
 }

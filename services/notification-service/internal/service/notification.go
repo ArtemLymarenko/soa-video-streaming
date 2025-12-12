@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"soa-video-streaming/pkg/rabbitmq"
 	"soa-video-streaming/services/notification-service/internal/config"
+	notificationsaga "soa-video-streaming/services/notification-service/internal/saga"
 	"soa-video-streaming/services/notification-service/pkg/notifications"
 
 	"github.com/sirupsen/logrus"
@@ -13,10 +14,11 @@ import (
 
 func Module() fx.Option {
 	return fx.Options(
-		fx.Provide(NewNotificationService),
-		fx.Invoke(func(n *NotificationService) error {
-			return n.RunSignUpEventHandler()
-		}),
+		fx.Provide(
+			NewNotificationService,
+			notificationsaga.NewNotificationSagaHandler,
+		),
+		fx.Invoke(notificationsaga.RegisterNotificationActor),
 	)
 }
 
