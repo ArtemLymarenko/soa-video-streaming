@@ -55,6 +55,42 @@ func (c *ContentServiceClient) GetAllCategories(ctx context.Context) ([]entity.C
 	return categories, nil
 }
 
+func (c *ContentServiceClient) CreateCategory(ctx context.Context, req dto.CreateCategoryRequest) (*entity.Category, error) {
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/api/v1/categories", c.baseURL), bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	var category entity.Category
+	if err := json.Unmarshal(body, &category); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return &category, nil
+}
+
 func (c *ContentServiceClient) CreateMediaContent(ctx context.Context, req dto.CreateMediaContentRequest) (string, error) {
 	payload, err := json.Marshal(req)
 	if err != nil {

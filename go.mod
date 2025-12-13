@@ -6,6 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/google/generative-ai-go v0.16.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/rabbitmq/amqp091-go v1.10.0
@@ -13,6 +14,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	go.uber.org/fx v1.24.0
 	golang.org/x/crypto v0.40.0
+	google.golang.org/api v0.186.0
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.9
 )
