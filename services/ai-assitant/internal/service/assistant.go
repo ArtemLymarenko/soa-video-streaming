@@ -1,4 +1,4 @@
 package service
 
-type Assistant struct {
+type AiAssistant struct {
 }

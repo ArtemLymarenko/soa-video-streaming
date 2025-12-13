@@ -55,16 +55,18 @@ func (c *Client) GetGenerativeModel(_ context.Context, modelName string) (*genai
 
 	model := c.client.GenerativeModel(config.Name)
 
-	// Apply configuration
 	if config.Temperature != nil {
 		model.SetTemperature(*config.Temperature)
 	}
+
 	if config.TopK != nil {
 		model.SetTopK(*config.TopK)
 	}
+
 	if config.TopP != nil {
 		model.SetTopP(*config.TopP)
 	}
+
 	if config.MaxOutputTokens != nil {
 		model.SetMaxOutputTokens(*config.MaxOutputTokens)
 	}
@@ -83,6 +85,7 @@ func (c *Client) GetGenerativeModel(_ context.Context, modelName string) (*genai
 		for i, tool := range config.Tools {
 			tools[i] = tool.ToGenaiTool()
 		}
+
 		model.Tools = tools
 	}
 

@@ -9,15 +9,17 @@ import (
 func Module() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			LoadConfig,
-			provideClient,
+			NewClientFromConfig,
 		),
 	)
 }
 
-func provideClient(lc fx.Lifecycle, config *Config) (*Client, error) {
-	ctx := context.Background()
-	client, err := NewClientFromConfig(ctx, config)
+type Config struct {
+	APIKey string `mapstructure:"api_key"`
+}
+
+func NewClientFromConfig(ctx context.Context, lc fx.Lifecycle, config *Config) (*Client, error) {
+	client, err := NewClient(ctx, config.APIKey)
 	if err != nil {
 		return nil, err
 	}
@@ -29,17 +31,4 @@ func provideClient(lc fx.Lifecycle, config *Config) (*Client, error) {
 	})
 
 	return client, nil
-}
-
-func ProvideModelConfig(name string, config *ModelConfig) fx.Option {
-	return fx.Provide(
-		fx.Annotate(
-			func(client *Client) (*MessageProcessor, error) {
-				if err := client.RegisterModel(config); err != nil {
-					return nil, err
-				}
-				return NewMessageProcessor(client, name), nil
-			},
-		),
-	)
 }
