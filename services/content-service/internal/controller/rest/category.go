@@ -25,7 +25,7 @@ func (c *CategoryController) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.PUT("/:id", c.Update)
 	rg.DELETE("/:id", c.Delete)
 	rg.GET("", c.GetByTimestamp)
-	rg.GET("", c.GetAll)
+	rg.GET("/all", c.GetAll)
 }
 
 func (c *CategoryController) GetAll(ctx *gin.Context) {

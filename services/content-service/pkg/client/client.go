@@ -27,7 +27,7 @@ func NewContentServiceClient(baseURL string) *ContentServiceClient {
 }
 
 func (c *ContentServiceClient) GetAllCategories(ctx context.Context) ([]entity.Category, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/categories", c.baseURL), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/categories/all", c.baseURL), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
