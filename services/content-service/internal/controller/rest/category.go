@@ -2,9 +2,9 @@ package rest
 
 import (
 	"net/http"
-	"soa-video-streaming/services/content-service/internal/controller/rest/dto"
 	"soa-video-streaming/services/content-service/internal/domain/entity"
 	"soa-video-streaming/services/content-service/internal/service"
+	"soa-video-streaming/services/content-service/pkg/dto"
 
 	"github.com/google/uuid"
 
@@ -25,6 +25,7 @@ func (c *CategoryController) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.PUT("/:id", c.Update)
 	rg.DELETE("/:id", c.Delete)
 	rg.GET("", c.GetByTimestamp)
+	rg.GET("/search", c.GetByName)
 	rg.GET("/all", c.GetAll)
 }
 
@@ -119,4 +120,24 @@ func (c *CategoryController) GetByTimestamp(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, categories)
+}
+
+func (c *CategoryController) GetByName(ctx *gin.Context) {
+	name := ctx.Query("name")
+	if name == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "name parameter is required"})
+		return
+	}
+
+	category, err := c.service.GetByName(ctx, name)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if category == nil {
+		ctx.Status(http.StatusNotFound)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, category)
 }

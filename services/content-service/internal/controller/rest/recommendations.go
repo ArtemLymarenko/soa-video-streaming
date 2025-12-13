@@ -1,10 +1,11 @@
 package rest
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
-	"soa-video-streaming/services/content-service/internal/controller/rest/dto"
 	"soa-video-streaming/services/content-service/internal/service"
+	"soa-video-streaming/services/content-service/pkg/dto"
+
+	"github.com/gin-gonic/gin"
 )
 
 type RecommendationsController struct {
@@ -40,9 +41,9 @@ func (c *RecommendationsController) GetRecommendations(ctx *gin.Context) {
 	}
 
 	if recommendations == nil {
-		ctx.JSON(http.StatusOK, []dto.RecommendationResponse{})
+		ctx.JSON(http.StatusOK, []dto.MediaContentResponse{})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.ToRecommendationResponses(recommendations))
+	ctx.JSON(http.StatusOK, recommendations)
 }

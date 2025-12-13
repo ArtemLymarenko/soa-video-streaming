@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/genai"
 )
 
 type Message struct {
@@ -54,7 +54,7 @@ func (mp *MessageProcessor) SendMessage(ctx context.Context, userMessage string)
 
 	session := model.StartChat()
 
-	resp, err := session.SendMessage(ctx, genai.Text(userMessage))
+	resp, err := session.SendMessage(ctx, &genai.Part{Text: userMessage})
 	if err != nil {
 		return nil, fmt.Errorf("failed to send message: %w", err)
 	}
@@ -76,21 +76,19 @@ func (mp *MessageProcessor) ProcessWithHistory(
 
 	for _, msg := range messages {
 		role := msg.Role
-		if role == "user" {
-			role = "user"
-		} else {
+		if role != "user" && role != "model" {
 			role = "model"
 		}
 
 		session.History = append(session.History, &genai.Content{
 			Role: role,
-			Parts: []genai.Part{
-				genai.Text(msg.Content),
+			Parts: []*genai.Part{
+				{Text: msg.Content},
 			},
 		})
 	}
 
-	resp, err := session.SendMessage(ctx, genai.Text(userMessage))
+	resp, err := session.SendMessage(ctx, &genai.Part{Text: userMessage})
 	if err != nil {
 		return nil, fmt.Errorf("failed to send message: %w", err)
 	}
@@ -114,7 +112,7 @@ func (mp *MessageProcessor) ProcessWithToolLoop(
 
 	session := model.StartChat()
 
-	resp, err := session.SendMessage(ctx, genai.Text(userMessage))
+	resp, err := session.SendMessage(ctx, &genai.Part{Text: userMessage})
 	if err != nil {
 		return nil, fmt.Errorf("failed to send message: %w", err)
 	}
@@ -126,16 +124,20 @@ func (mp *MessageProcessor) ProcessWithToolLoop(
 			return processedResp, nil
 		}
 
-		toolResults := make([]genai.Part, 0)
+		toolResults := make([]*genai.Part, 0)
 		for _, toolCall := range processedResp.ToolCalls {
 			result, err := mp.executeToolCall(ctx, toolCall)
 			if err != nil {
 				result = fmt.Sprintf("Error: %v", err)
 			}
 
-			toolResults = append(toolResults, &genai.FunctionResponse{
-				Name:     toolCall.Name,
-				Response: map[string]interface{}{"result": result},
+			responseMap := map[string]any{"result": result}
+
+			toolResults = append(toolResults, &genai.Part{
+				FunctionResponse: &genai.FunctionResponse{
+					Name:     toolCall.Name,
+					Response: responseMap,
+				},
 			})
 		}
 
@@ -180,25 +182,29 @@ func (mp *MessageProcessor) extractResponse(resp *genai.GenerateContentResponse)
 	}
 
 	candidate := resp.Candidates[0]
-	processed.FinishReason = string(candidate.FinishReason)
+
+	if candidate.FinishReason != "" {
+		processed.FinishReason = string(candidate.FinishReason)
+	}
 
 	if candidate.Content == nil {
 		return processed
 	}
 
 	for _, part := range candidate.Content.Parts {
-		switch v := part.(type) {
-		case genai.Text:
-			processed.Text += string(v)
+		if part.Text != "" {
+			processed.Text += part.Text
+		}
 
-		case *genai.FunctionCall:
-			argsData, _ := json.Marshal(v.Args)
+		if part.FunctionCall != nil {
+			argsData, _ := json.Marshal(part.FunctionCall.Args)
 			toolCall := &ToolCall{
-				Name:      v.Name,
+				Name:      part.FunctionCall.Name,
 				Arguments: argsData,
 			}
 
 			processed.ToolCalls = append(processed.ToolCalls, toolCall)
+			processed.IsFinished = false
 		}
 	}
 
@@ -208,8 +214,8 @@ func (mp *MessageProcessor) extractResponse(resp *genai.GenerateContentResponse)
 func BuildUserContent(text string) *genai.Content {
 	return &genai.Content{
 		Role: "user",
-		Parts: []genai.Part{
-			genai.Text(text),
+		Parts: []*genai.Part{
+			{Text: text},
 		},
 	}
 }
@@ -217,8 +223,8 @@ func BuildUserContent(text string) *genai.Content {
 func BuildAssistantContent(text string) *genai.Content {
 	return &genai.Content{
 		Role: "model",
-		Parts: []genai.Part{
-			genai.Text(text),
+		Parts: []*genai.Part{
+			{Text: text},
 		},
 	}
 }

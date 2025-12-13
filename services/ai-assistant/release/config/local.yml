@@ -1,0 +1,6 @@
+http:
+  addr: localhost:8085
+gemini:
+  api_key: 
+services:
+  content_service_url: http://localhost:8081

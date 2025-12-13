@@ -40,6 +40,22 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id entity.CategoryID) 
 	return &c, nil
 }
 
+func (r *CategoryRepository) GetByName(ctx context.Context, name string) (*entity.Category, error) {
+	q := `SELECT id, name, description FROM categories WHERE name = $1`
+
+	row := r.db.QueryRow(ctx, q, name)
+
+	var c entity.Category
+	if err := row.Scan(&c.ID, &c.Name, &c.Description); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &c, nil
+}
+
 func (r *CategoryRepository) Update(ctx context.Context, c entity.Category) error {
 	q := `UPDATE categories SET name = $1, description = $2 WHERE id = $3`
 

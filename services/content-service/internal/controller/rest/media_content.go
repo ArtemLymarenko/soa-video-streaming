@@ -1,12 +1,13 @@
 package rest
 
 import (
-	"github.com/google/uuid"
 	"net/http"
-	"soa-video-streaming/services/content-service/internal/controller/rest/dto"
 	"soa-video-streaming/services/content-service/internal/domain/entity"
 	"soa-video-streaming/services/content-service/internal/service"
+	"soa-video-streaming/services/content-service/pkg/dto"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/gin-gonic/gin"
 )

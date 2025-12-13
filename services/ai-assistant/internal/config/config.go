@@ -1,11 +1,12 @@
 package config
 
 import (
-	"github.com/sirupsen/logrus"
-	"go.uber.org/fx"
 	"soa-video-streaming/pkg/config"
 	"soa-video-streaming/pkg/httpsrv"
-	"soa-video-streaming/services/ai-assitant/pkg/gemini"
+	"soa-video-streaming/services/ai-assistant/pkg/gemini"
+
+	"github.com/sirupsen/logrus"
+	"go.uber.org/fx"
 )
 
 type AppConfig struct {
@@ -16,6 +17,10 @@ type AppConfig struct {
 	Gemini struct {
 		gemini.Config `mapstructure:",squash"`
 	} `mapstructure:"gemini"`
+
+	Services struct {
+		ContentServiceURL string `mapstructure:"content_service_url"`
+	} `mapstructure:"services"`
 }
 
 func NewAppConfig() (*AppConfig, error) {

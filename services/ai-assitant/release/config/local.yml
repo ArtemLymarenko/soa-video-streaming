@@ -1,4 +1,0 @@
-http:
-  addr: localhost:8085
-gemini:
-  api_key: local_gemini_api_key

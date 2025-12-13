@@ -2,7 +2,6 @@ package gemini
 
 import (
 	"context"
-
 	"go.uber.org/fx"
 )
 
@@ -18,7 +17,8 @@ type Config struct {
 	APIKey string `mapstructure:"api_key"`
 }
 
-func NewClientFromConfig(ctx context.Context, lc fx.Lifecycle, config *Config) (*Client, error) {
+func NewClientFromConfig(lc fx.Lifecycle, config *Config) (*Client, error) {
+	ctx := context.Background()
 	client, err := NewClient(ctx, config.APIKey)
 	if err != nil {
 		return nil, err

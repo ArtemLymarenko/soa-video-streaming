@@ -22,6 +22,10 @@ func (s *CategoryService) GetByID(ctx context.Context, id entity.CategoryID) (*e
 	return s.repo.GetByID(ctx, id)
 }
 
+func (s *CategoryService) GetByName(ctx context.Context, name string) (*entity.Category, error) {
+	return s.repo.GetByName(ctx, name)
+}
+
 func (s *CategoryService) Update(ctx context.Context, c entity.Category) error {
 	return s.repo.Update(ctx, c)
 }

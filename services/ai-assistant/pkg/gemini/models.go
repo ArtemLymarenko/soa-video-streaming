@@ -3,7 +3,7 @@ package gemini
 import (
 	"encoding/json"
 
-	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/genai"
 )
 
 type ModelConfig struct {
@@ -34,6 +34,7 @@ type Property struct {
 	Enum        []string `json:"enum,omitempty"`
 }
 
+// ToGenaiTool конвертує внутрішню структуру в genai.Tool нового SDK
 func (t *Tool) ToGenaiTool() *genai.Tool {
 	return &genai.Tool{
 		FunctionDeclarations: []*genai.FunctionDeclaration{
