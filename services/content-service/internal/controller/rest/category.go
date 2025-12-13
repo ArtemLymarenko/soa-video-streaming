@@ -25,6 +25,17 @@ func (c *CategoryController) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.PUT("/:id", c.Update)
 	rg.DELETE("/:id", c.Delete)
 	rg.GET("", c.GetByTimestamp)
+	rg.GET("", c.GetAll)
+}
+
+func (c *CategoryController) GetAll(ctx *gin.Context) {
+	categories, err := c.service.GetAll(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, categories)
 }
 
 func (c *CategoryController) Create(ctx *gin.Context) {

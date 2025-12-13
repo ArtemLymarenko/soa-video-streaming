@@ -80,6 +80,32 @@ func (r *CategoryRepository) GetByTimestamp(ctx context.Context, from, to int64)
 	return items, nil
 }
 
+func (r *CategoryRepository) GetAll(ctx context.Context) ([]entity.Category, error) {
+	q := `SELECT id, name, description FROM categories`
+
+	rows, err := r.db.Query(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []entity.Category
+
+	for rows.Next() {
+		var c entity.Category
+		if err := rows.Scan(&c.ID, &c.Name, &c.Description); err != nil {
+			return nil, err
+		}
+		items = append(items, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
 func (r *CategoryRepository) GetMaxTimestamp(ctx context.Context) (int64, error) {
 	q := `SELECT COALESCE(
             EXTRACT(EPOCH FROM MAX(updated_at))::bigint, 

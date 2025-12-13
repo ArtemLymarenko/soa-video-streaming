@@ -34,6 +34,10 @@ func (s *CategoryService) GetByTimestamp(ctx context.Context, from, to int64) ([
 	return s.repo.GetByTimestamp(ctx, from, to)
 }
 
-func (c *CategoryService) GetMaxTimestamp(ctx context.Context) (int64, error) {
-	return c.repo.GetMaxTimestamp(ctx)
+func (s *CategoryService) GetMaxTimestamp(ctx context.Context) (int64, error) {
+	return s.repo.GetMaxTimestamp(ctx)
+}
+
+func (s *CategoryService) GetAll(ctx context.Context) ([]entity.Category, error) {
+	return s.repo.GetAll(ctx)
 }
