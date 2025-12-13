@@ -75,23 +75,6 @@ func (w *RegisterUserWorkflow) HandleUserSignUp(_ context.Context, event *saga.E
 	})
 }
 
-func (w *RegisterUserWorkflow) HandleCompensateUserSignUp(_ context.Context, event *saga.Event) error {
-	var state domain.UserSignUpPayload
-	if err := event.GetState(&state); err != nil {
-		return err
-	}
-
-	event.SendCommand(domain.CmdCompensateBucket, domain.CompensateUserSignUpPayload{
-		UserID: state.UserID,
-	})
-
-	event.SendCommand(domain.CmdCompensateUser, domain.CompensateUserSignUpPayload{
-		UserID: state.UserID,
-	})
-
-	return nil
-}
-
 func (w *RegisterUserWorkflow) HandleBucketCreated(_ context.Context, event *saga.Event) error {
 	var payload domain.BucketPayload
 	if err := event.UnmarshalPayload(&payload); err != nil {
