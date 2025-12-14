@@ -1,0 +1,2 @@
+services:
+  content_service_addr: "http://localhost:8081"
