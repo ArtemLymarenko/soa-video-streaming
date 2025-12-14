@@ -34,7 +34,6 @@ type Property struct {
 	Enum        []string `json:"enum,omitempty"`
 }
 
-// ToGenaiTool конвертує внутрішню структуру в genai.Tool нового SDK
 func (t *Tool) ToGenaiTool() *genai.Tool {
 	return &genai.Tool{
 		FunctionDeclarations: []*genai.FunctionDeclaration{
@@ -53,16 +52,19 @@ func (t *Tool) ToGenaiTool() *genai.Tool {
 
 func (t *Tool) toGenaiProperties() map[string]*genai.Schema {
 	props := make(map[string]*genai.Schema)
+
 	for key, prop := range t.Parameters.Properties {
 		schema := &genai.Schema{
 			Type:        t.stringToType(prop.Type),
 			Description: prop.Description,
 		}
+
 		if len(prop.Enum) > 0 {
 			schema.Enum = prop.Enum
 		}
 		props[key] = schema
 	}
+
 	return props
 }
 

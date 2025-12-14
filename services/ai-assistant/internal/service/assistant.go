@@ -36,7 +36,7 @@ func NewAssistant(client *gemini.Client, contentClient *client.ContentServiceCli
 	var maxTokens int32 = 2048
 
 	modelConfig := &gemini.ModelConfig{
-		Name:            "models/gemini-1.5-flash",
+		Name:            "gemini-2.5-flash-lite",
 		Temperature:     &temp,
 		MaxOutputTokens: &maxTokens,
 	}
@@ -48,7 +48,7 @@ func NewAssistant(client *gemini.Client, contentClient *client.ContentServiceCli
 	createCategoryTool := gemini.NewTool("CreateCategory", "Create a new movie category").
 		AddParameter("name", "string", "Name of the category to create").
 		AddParameter("description", "string", "Description of the category").
-		MarkRequired("name", "description")
+		MarkRequired("name")
 
 	createMovieTool := gemini.NewTool("CreateMovie", "Create a new movie or series").
 		AddParameter("title", "string", "Title of the movie/series").
@@ -66,7 +66,7 @@ func NewAssistant(client *gemini.Client, contentClient *client.ContentServiceCli
 		return nil, fmt.Errorf("failed to register model: %w", err)
 	}
 
-	a.processor = gemini.NewMessageProcessor(client, "models/gemini-1.5-flash")
+	a.processor = gemini.NewMessageProcessor(client, "gemini-2.5-flash-lite")
 
 	a.processor.RegisterHandler("CheckCategory", a.HandleCheckCategory)
 	a.processor.RegisterHandler("CreateCategory", a.HandleCreateCategory)
