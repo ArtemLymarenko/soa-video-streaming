@@ -1,0 +1,16 @@
+app:
+  name: "a2a-server"
+  version: "1.0.0"
+
+logger:
+  level: "info"
+  format: "text"
+
+services:
+  content_service_url: "http://localhost:8081"
+
+gemini:
+  api_key: "123"  # Set via env GEMINI_API_KEY
+
+server:
+  port: 8082
